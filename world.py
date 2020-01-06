@@ -1,4 +1,5 @@
 import argparse
+import networkx as nx
 import random
 import sys
 
@@ -16,19 +17,13 @@ steady_state_threshold = 100
 mode = "symmetric" # ["symmetric" | "asymmetric"]
 form_closure = False
 evidence_only = False
+# demo_mode should be used to visualise performance live during simulation run
 demo_mode = False
 
-# List of evidence rates
-# evidence_rates = [0.0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0]
 evidence_rates = [0.0, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
-# Set a single evidence rate to begin with, in case we don't test the whole list
-# and only want to experiment with a preset evidence rate.
 evidence_rate = 5/100
-# List of noise values
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
-# Default value: None - no noise is added to the simulation. This default is important
-# because noise values can be negative.
-noise_value = None   # None
+noise_value = None
 # Store the generated comparison error values so that we only need to generate them once.
 comparison_errors = []
 
@@ -36,17 +31,24 @@ comparison_errors = []
 # initialisation functions later.
 init_preferences = preferences.ignorant_pref_generator
 
-def setup(num_of_agents, states, agents: [], random_instance):
+def setup(
+    num_of_agents, states, agents: [], network, edges: [], connectivity,
+    random_instance
+):
     """
     This setup function runs before any other part of the code. Starting with
     the creation of agents and the initialisation of relevant variables.
     """
 
     agents += [Agent(init_preferences(states), form_closure) for x in range(num_of_agents)]
+    edges  += nx.gnp_random_graph(len(agents), connectivity, random_instance).edges
+    network.update(edges, agents)
 
     return
 
-def main_loop(agents: [], states: int, true_order: [], mode: str, random_instance):
+def main_loop(
+    agents: [], states: int, true_order: [], mode: str, random_instance
+):
     """
     The main loop performs various actions in sequence until certain conditions are
     met, or the maximum number of iterations is reached.
@@ -114,17 +116,23 @@ def main():
     decision-making in a multi-agent environment.")
     parser.add_argument("agents", type=int)
     parser.add_argument("states", type=int)
+    parser.add_argument("connectivity", type=float)
     parser.add_argument("-r", "--random", type=bool, help="Random seeding of the RNG.")
     arguments = parser.parse_args()
+
+    # Create an instance of a RNG that is either seeded for consistency of simulation
+    # results, or create using a random seed for further testing.
+    random_instance = random.Random()
+    random_instance.seed(128) if arguments.random == None else random_instance.seed()
+
+    # Output variables
+    directory = "../results/test_results/pddm-network/"
+    file_name_params = []
 
     # True state of the world
     true_order = []
     true_prefs = []
     opposite_prefs = []
-
-    # Output variables
-    directory = "../results/test_results/pddm/"
-    file_name_params = []
 
     true_order = [x for x in reversed(range(arguments.states))]
     true_prefs = init_preferences(arguments.states)
@@ -135,25 +143,22 @@ def main():
     true_prefs = operators.transitive_closure(true_prefs)
     opposite_prefs = operators.transitive_closure(opposite_prefs)
 
-    global comparison_errors
-    comparison_errors = []
     global evidence_rate
     global noise_value
 
     print("Evidence rate: ", evidence_rate)
     print("Noise value:", noise_value)
 
+    global comparison_errors
+    comparison_errors = []
     if noise_value is not None:
         for state in range(1, arguments.states):
-            comparison_errors.append(preferences.comparison_error(
-                state / arguments.states,
-                noise_value
-            ))
-
-    # Create an instance of a RNG that is either seeded for consistency of simulation
-    # results, or create using a random seed for further testing.
-    random_instance = random.Random()
-    random_instance.seed(128) if arguments.random == None else random_instance.seed()
+            comparison_errors.append(
+                preferences.comparison_error(
+                    state / arguments.states,
+                    noise_value
+                )
+            )
 
     # Set up the collecting of results
     # preference_results = [
@@ -221,7 +226,8 @@ def main():
     file_name_params.append("{}_agents".format(arguments.agents))
     file_name_params.append("{}_states".format(arguments.states))
     file_name_params.append("{:.3f}_er".format(evidence_rate))
-    file_name_params.append("no_closure")
+    if form_closure is False:
+        file_name_params.append("no_cl")
     if noise_value is not None:
         file_name_params.append("{:.3f}_nv".format(noise_value))
     # Then write the results given the parameters.
@@ -241,38 +247,47 @@ def main():
         max_iteration
     )
 
-    # if demo_mode:
-        # Output plots while running simulations, but do not record the results.
-    # else:
-        # Record the results but skip the plotting.
-
 
 if __name__ == "__main__":
 
-    # For standard runs and testing:
+    test_set = "both" # "standard" | "evidence" | "noise" | "both"
 
-    # Profiling setup.
-    # import cProfile, pstats, io
-    # pr = cProfile.Profile()
-    # pr.enable()
-    # END
+    if test_set == "standard":
 
-    # main()
+        # Profiling setup.
+        # import cProfile, pstats, io
+        # pr = cProfile.Profile()
+        # pr.enable()
+        # END
 
-    # Profile post-processing.
-    # pr.disable()
-    # s = io.StringIO()
-    # sortby = 'cumulative'
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # print(s.getvalue())
-    # END
-
-
-    # for er in evidence_rates:
-    #     evidence_rate = er
-    #     main()
-
-    for nv in noise_values:
-        noise_value = nv
         main()
+
+        # Profile post-processing.
+        # pr.disable()
+        # s = io.StringIO()
+        # sortby = 'cumulative'
+        # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        # ps.print_stats()
+        # print(s.getvalue())
+        # END
+
+    elif test_set == "evidence":
+
+        for er in evidence_rates:
+            evidence_rate = er
+            main()
+
+    elif test_set == "noise":
+
+        for nv in noise_values:
+            noise_value = nv
+            main()
+
+    elif test_set == "both":
+
+        for er in evidence_rates:
+            evidence_rate = er
+
+            for nv in noise_values:
+                noise_value = nv
+                main()
