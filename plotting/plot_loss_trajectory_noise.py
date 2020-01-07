@@ -15,7 +15,7 @@ er = 0.05
 # Noise levels. None specifies no noise model, but required to use the same for-loop.
 noise_levels = [0, 1, 5, 10, 20, 100]
 
-result_directory = "../../results/test_results/pddm/"
+result_directory = "../../results/test_results/pddm-network/"
 
 closure = False
 if closure:

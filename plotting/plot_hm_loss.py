@@ -11,7 +11,7 @@ agents_set = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 evidence_rates = [0.0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0]
 er = 0.05
 
-result_directory = "../../results/test_results/pddm/"
+result_directory = "../../results/test_results/pddm-network/"
 
 heatmap_results = np.array([[0.0 for x in agents_set] for y in states_set])
 labels = [["" for x in agents_set] for y in states_set]
@@ -43,9 +43,6 @@ for i, states in enumerate(reversed(states_set)):
 
 print(heatmap_results)
 print(labels)
-# cmap = sns.cubehelix_palette(8, start=3.3, rot=0.33, dark=0, light=.96, hue=1.8, as_cmap=True)
-# cmap = sns.cubehelix_palette(8, start=2.4, rot=0.68, dark=0.08, light=.96, hue=1, as_cmap=True)
-# cmap = cm.get_cmap('magma') #'Greys_r'
 cmap = sns.cm.rocket_r
 ax = sns.heatmap(
     heatmap_results,

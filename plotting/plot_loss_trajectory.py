@@ -14,7 +14,7 @@ er = 0.01
 noise_levels = [0, 1, 5, 10, 20, 100]
 noise_levels = [None]
 
-result_directory = "../../results/test_results/pddm/"
+result_directory = "../../results/test_results/pddm-network/"
 
 iterations = [x for x in range(10000)]
 
