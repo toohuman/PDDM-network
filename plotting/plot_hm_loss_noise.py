@@ -62,5 +62,5 @@ for j, agents in enumerate(agents_set):
     plt.title("{} agents, {} evidence rate".format(agents, er))
     ax.set(xlabel='Noise value', ylabel='No. of States')
     # plt.show()
-    plt.savefig("../../results/graphs/pddm/{}_agents_hm_{}_er_noise.pdf".format(agents, states, er))
+    plt.savefig("../../results/graphs/pddm-network/{}_agents_hm_{}_er_noise.pdf".format(agents, states, er))
     plt.clf()

@@ -72,5 +72,5 @@ for j, agents in enumerate(agents_set):
     plt.title("Average loss | {} agents, {} evidence rate".format(agents, er))
     ax.set(xlabel='Noise value', ylabel='No. of States')
     # plt.show()
-    plt.savefig("../../results/graphs/sotw/loss_hm_{}_agents_{}-{}_states_noisy{}{}.pdf".format(agents, states_set[0], states_set[-1], partition_str, exploration_str), bbox_inches="tight")
+    plt.savefig("../../results/graphs/pddm-network/loss_hm_{}_agents_{}-{}_states_noisy{}{}.pdf".format(agents, states_set[0], states_set[-1], partition_str, exploration_str), bbox_inches="tight")
     plt.clf()

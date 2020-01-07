@@ -88,5 +88,5 @@ for i, states in enumerate(states_set):
         if states == 10:
             plt.xlim((-30, 1100))
         # plt.show()
-        plt.savefig("../../results/graphs/pddm/{}_agents_{}_states_{}_er{}.pdf".format(agents, states, er, closure_string))
+        plt.savefig("../../results/graphs/pddm-network/{}_agents_{}_states_{}_er{}.pdf".format(agents, states, er, closure_string))
         plt.clf()

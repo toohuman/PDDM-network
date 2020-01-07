@@ -67,5 +67,5 @@ for noise in noise_levels:
         plt.title("{} agents".format(agents))
         plt.legend(states_set)
         # plt.show()
-        plt.savefig("../../results/graphs/pddm/{}_agents_{}_er.pdf".format(agents, er))
+        plt.savefig("../../results/graphs/pddm-network/{}_agents_{}_er.pdf".format(agents, er))
         plt.clf()
