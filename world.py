@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 100
+tests = 10
 iteration_limit = 10000
 steady_state_threshold = 100
 
@@ -23,7 +23,7 @@ demo_mode = False
 evidence_rates = [0.0, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 5/100
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
-noise_value = None
+noise_value = 5.0
 # Store the generated comparison error values so that we only need to generate them once.
 comparison_errors = []
 
@@ -32,22 +32,21 @@ comparison_errors = []
 init_preferences = preferences.ignorant_pref_generator
 
 def setup(
-    num_of_agents, states, agents: [], network, edges: [], connectivity,
+    num_of_agents, states, agents: [], network, connectivity,
     random_instance
 ):
     """
     This setup function runs before any other part of the code. Starting with
     the creation of agents and the initialisation of relevant variables.
     """
-
     agents += [Agent(init_preferences(states), form_closure) for x in range(num_of_agents)]
-    edges  += nx.gnp_random_graph(len(agents), connectivity, random_instance).edges
+    edges   = nx.gnp_random_graph(len(agents), connectivity, random_instance).edges
     network.update(edges, agents)
 
     return
 
 def main_loop(
-    agents: [], states: int, true_order: [], mode: str, random_instance
+    agents: [], states: int, network, true_order: [], mode: str, random_instance
 ):
     """
     The main loop performs various actions in sequence until certain conditions are
@@ -59,16 +58,17 @@ def main_loop(
     # updating.
     reached_convergence = True
     for agent in agents:
-        # Currently, just testing with random evidence.
-        evidence = preferences.random_evidence(
-            states,
-            true_order,
-            noise_value,
-            comparison_errors,
-            random_instance
-        )
 
         if random_instance.random() <= evidence_rate:
+            
+            # Generate a random piece of evidence, selectinf from the set of unknown states.
+            evidence = preferences.random_evidence(
+                states,
+                true_order,
+                noise_value,
+                comparison_errors,
+                random_instance
+            )
             agent.evidential_updating(operators.combine(agent.preferences, evidence))
 
         reached_convergence &= agent.steady_state(steady_state_threshold)
@@ -84,10 +84,10 @@ def main_loop(
     # Symmetric model: a single pair of agents is selected per iteration
     # and they both adopt the resulting combination.
     if mode == "symmetric":
-        agent1 = agents[random_instance.randint(0,len(agents) - 1)]
-        agent2 = agent1
-        while agent2 == agent1:
-            agent2 = agents[random_instance.randint(0,len(agents) - 1)]
+
+        chosen_nodes = random_instance.choice(list(network.edges))
+
+        agent1, agent2 = agents[chosen_nodes[0]], agents[chosen_nodes[1]]
 
         new_preference = operators.combine(agent1.preferences, agent2.preferences)
         # print(new_preference)
@@ -115,8 +115,10 @@ def main():
     parser = argparse.ArgumentParser(description="Preference-based distributed\
     decision-making in a multi-agent environment.")
     parser.add_argument("agents", type=int)
-    parser.add_argument("states", type=int)
-    parser.add_argument("connectivity", type=float)
+    parser.add_argument("states", type=int, help="Produces the preference ordering:\
+        1 > ... > n.")
+    parser.add_argument("connectivity", type=float, help="Connectivity of the random graph in [0,1],\
+        e.g., probability of an edge between any two nodes.")
     parser.add_argument("-r", "--random", type=bool, help="Random seeding of the RNG.")
     arguments = parser.parse_args()
 
@@ -171,15 +173,27 @@ def main():
         [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
     ]
     loss_results = np.array(loss_results)
+    steady_state_results = [
+        [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
+    ]
+    steady_state_results = np.array(steady_state_results)
 
     # Repeat the setup and loop for the number of simulation runs required
     max_iteration = 0
     for test in range(tests):
-        # print("Test #" + str(test), end="\r")
+
         agents = list()
+        network = nx.Graph()
 
         # Initial setup of agents and environment.
-        setup(arguments.agents, arguments.states, agents, random_instance)
+        setup(
+            arguments.agents,
+            arguments.states,
+            agents,
+            network,
+            arguments.connectivity,
+            random_instance
+        )
 
         # Pre-loop results based on agent initialisation.
         for agent in agents:
@@ -194,21 +208,26 @@ def main():
             print("Test #" + str(test) + " - Iteration #" + str(iteration) + "  ", end="\r")
             max_iteration = iteration if iteration > max_iteration else max_iteration
             # While not converged, continue to run the main loop.
-            if main_loop(agents, arguments.states, true_order, mode, random_instance):
-                for agent in agents:
+            if main_loop(agents, arguments.states, network, true_order, mode, random_instance):
+                for a, agent in enumerate(agents):
                     # prefs = results.identify_preference(agent.preferences)
                     # for pref in prefs:
                     #     preference_results[iteration][test][pref] += 1.0 / len(prefs)
-                    loss_results[iteration][test] += results.loss(agent.preferences, true_prefs)
+                    loss = results.loss(agent.preferences, true_prefs)
+                    loss_results[iteration][test] += loss
+                    if iteration == iteration_limit:
+                        steady_state_results[test][a] = loss
 
             # If the simulation has converged, end the test.
             else:
                 # print("Converged: ", iteration)
-                for agent in agents:
+                for a, agent in enumerate(agents):
                     # prefs = results.identify_preference(agent.preferences)
                     # for pref in prefs:
                     #     preference_results[iteration][test][pref] += 1.0 / len(prefs)
-                    loss_results[iteration][test] += results.loss(agent.preferences, true_prefs)
+                    loss = results.loss(agent.preferences, true_prefs)
+                    loss_results[iteration][test] += loss
+                    steady_state_results[test][a] = loss
                 for iter in range(iteration + 1, iteration_limit + 1):
                     # preference_results[iter][test] = np.copy(preference_results[iteration][test])
                     loss_results[iter][test] = np.copy(loss_results[iteration][test])
@@ -245,6 +264,13 @@ def main():
         file_name_params,
         loss_results,
         max_iteration
+    )
+    results.write_to_file(
+        directory,
+        "steady_state_loss",
+        file_name_params,
+        steady_state_results,
+        tests
     )
 
 
