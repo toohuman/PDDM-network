@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 10
+tests = 100
 iteration_limit = 10000
 steady_state_threshold = 100
 
@@ -20,7 +20,7 @@ evidence_only = False
 # demo_mode should be used to visualise performance live during simulation run
 demo_mode = False
 
-evidence_rates = [0.0, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 5/100
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
 noise_value = 5.0
@@ -60,7 +60,7 @@ def main_loop(
     for agent in agents:
 
         if random_instance.random() <= evidence_rate:
-            
+
             # Generate a random piece of evidence, selectinf from the set of unknown states.
             evidence = preferences.random_evidence(
                 states,
@@ -85,7 +85,10 @@ def main_loop(
     # and they both adopt the resulting combination.
     if mode == "symmetric":
 
-        chosen_nodes = random_instance.choice(list(network.edges))
+        try:
+            chosen_nodes = random_instance.choice(list(network.edges))
+        except IndexError:
+            return True
 
         agent1, agent2 = agents[chosen_nodes[0]], agents[chosen_nodes[1]]
 
@@ -244,11 +247,13 @@ def main():
     # directory += "{0}/{1}/".format(arguments.agents, arguments.states)
     file_name_params.append("{}_agents".format(arguments.agents))
     file_name_params.append("{}_states".format(arguments.states))
+    if arguments.connectivity is not None:
+        file_name_params.append("{}_con".format(arguments.connectivity))
     file_name_params.append("{:.3f}_er".format(evidence_rate))
-    if form_closure is False:
-        file_name_params.append("no_cl")
     if noise_value is not None:
         file_name_params.append("{:.3f}_nv".format(noise_value))
+    if form_closure is False:
+        file_name_params.append("no_cl")
     # Then write the results given the parameters.
     # results.write_to_file(
     #     directory,
