@@ -24,6 +24,8 @@ evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 5/100
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
 noise_value = 5.0
+connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
+connectivity_value = None
 # Store the generated comparison error values so that we only need to generate them once.
 comparison_errors = []
 
@@ -117,9 +119,9 @@ def main():
     # Parse the arguments of the program, e.g., agents, states, random init.
     parser = argparse.ArgumentParser(description="Preference-based distributed\
     decision-making in a multi-agent environment.")
-    parser.add_argument("agents", type=int)
     parser.add_argument("states", type=int, help="Produces the preference ordering:\
         1 > ... > n.")
+    parser.add_argument("agents", type=int)
     parser.add_argument("connectivity", type=float, help="Connectivity of the random graph in [0,1],\
         e.g., probability of an edge between any two nodes.")
     parser.add_argument("-r", "--random", type=bool, help="Random seeding of the RNG.")
@@ -134,6 +136,20 @@ def main():
     directory = "../results/test_results/pddm-network/"
     file_name_params = []
 
+    print("Connectivity:", connectivity_value)
+    print("Evidence rate:", evidence_rate)
+    print("Noise value:", noise_value)
+
+    comparison_errors[:] = []
+    if noise_value is not None:
+        for state in range(1, arguments.states):
+            comparison_errors.append(
+                preferences.comparison_error(
+                    state / arguments.states,
+                    noise_value
+                )
+            )
+
     # True state of the world
     true_order = []
     true_prefs = []
@@ -147,23 +163,6 @@ def main():
         opposite_prefs.add((true_order[i + 1],true_order[i]))
     true_prefs = operators.transitive_closure(true_prefs)
     opposite_prefs = operators.transitive_closure(opposite_prefs)
-
-    global evidence_rate
-    global noise_value
-
-    print("Evidence rate: ", evidence_rate)
-    print("Noise value:", noise_value)
-
-    global comparison_errors
-    comparison_errors = []
-    if noise_value is not None:
-        for state in range(1, arguments.states):
-            comparison_errors.append(
-                preferences.comparison_error(
-                    state / arguments.states,
-                    noise_value
-                )
-            )
 
     # Set up the collecting of results
     # preference_results = [
@@ -208,7 +207,7 @@ def main():
         # Main loop of the experiments. Starts at 1 because we have recorded the agents'
         # initial state above, at the "0th" index.
         for iteration in range(1, iteration_limit + 1):
-            print("Test #" + str(test) + " - Iteration #" + str(iteration) + "  ", end="\r")
+            print("Test #{} - Iteration #{}    ".format(test, iteration), end="\r")
             max_iteration = iteration if iteration > max_iteration else max_iteration
             # While not converged, continue to run the main loop.
             if main_loop(agents, arguments.states, network, true_order, mode, random_instance):
@@ -281,7 +280,7 @@ def main():
 
 if __name__ == "__main__":
 
-    test_set = "both" # "standard" | "evidence" | "noise" | "both"
+    test_set = "enc" # "standard" | "evidence" | "noise" | "en" | "enc"
 
     if test_set == "standard":
 
@@ -314,7 +313,7 @@ if __name__ == "__main__":
             noise_value = nv
             main()
 
-    elif test_set == "both":
+    elif test_set == "en":
 
         for er in evidence_rates:
             evidence_rate = er
@@ -322,3 +321,15 @@ if __name__ == "__main__":
             for nv in noise_values:
                 noise_value = nv
                 main()
+
+    elif test_set == "enc":
+
+        for con in connectivity_values:
+            connectivity_value = con
+
+            for er in evidence_rates:
+                evidence_rate = er
+
+                for nv in noise_values:
+                    noise_value = nv
+                    main()
