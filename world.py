@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 10
+tests = 50
 iteration_limit = 10000
 steady_state_threshold = 100
 
