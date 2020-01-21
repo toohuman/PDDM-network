@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 100
+tests = 10
 iteration_limit = 10000
 steady_state_threshold = 100
 
@@ -21,9 +21,9 @@ evidence_only = False
 demo_mode = False
 
 evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
-evidence_rate = 5/100
+evidence_rate = 10/100
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
-noise_value = 5.0
+noise_value = 1.0
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = None
 # Store the generated comparison error values so that we only need to generate them once.
@@ -122,10 +122,17 @@ def main():
     parser.add_argument("states", type=int, help="Produces the preference ordering:\
         1 > ... > n.")
     parser.add_argument("agents", type=int)
-    parser.add_argument("connectivity", type=float, help="Connectivity of the random graph in [0,1],\
+    parser.add_argument("-c", "--connectivity", type=float, help="Connectivity of the random graph in [0,1],\
         e.g., probability of an edge between any two nodes.")
     parser.add_argument("-r", "--random", type=bool, help="Random seeding of the RNG.")
     arguments = parser.parse_args()
+
+    if connectivity_value is not None:
+        arguments.connectivity = connectivity_value
+
+    if arguments.connectivity is None:
+        print("Usage error: Connectivity must be specified for node-only graph.")
+        sys.exit(0)
 
     # Create an instance of a RNG that is either seeded for consistency of simulation
     # results, or create using a random seed for further testing.
@@ -136,7 +143,7 @@ def main():
     directory = "../results/test_results/pddm-network/"
     file_name_params = []
 
-    print("Connectivity:", connectivity_value)
+    print("Connectivity:", arguments.connectivity)
     print("Evidence rate:", evidence_rate)
     print("Noise value:", noise_value)
 
@@ -280,7 +287,7 @@ def main():
 
 if __name__ == "__main__":
 
-    test_set = "enc" # "standard" | "evidence" | "noise" | "en" | "enc"
+    test_set = "standard" # "standard" | "evidence" | "noise" | "en" | "enc"
 
     if test_set == "standard":
 
