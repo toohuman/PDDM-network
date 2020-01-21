@@ -63,7 +63,7 @@ def main_loop(
 
         if random_instance.random() <= evidence_rate:
 
-            # Generate a random piece of evidence, selectinf from the set of unknown states.
+            # Generate a random piece of evidence, selecting from the set of unknown states.
             evidence = preferences.random_evidence(
                 states,
                 true_order,
@@ -287,7 +287,7 @@ def main():
 
 if __name__ == "__main__":
 
-    test_set = "standard" # "standard" | "evidence" | "noise" | "en" | "enc"
+    test_set = "enc" # "standard" | "evidence" | "noise" | "en" | "enc"
 
     if test_set == "standard":
 
