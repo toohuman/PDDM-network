@@ -6,7 +6,7 @@ class Agent:
     evidence        = int
     interactions    = int
     since_change    = int
-    form_closure = bool
+    form_closure    = bool
 
     def __init__(self, preferences, form_closure):
 
