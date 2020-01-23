@@ -18,7 +18,7 @@ def comparison_error(x: float, param: float):
 
     # Special case:
     if param == 0.0:
-        return 0.0
+        return round(bound * (1 - x), 5)
 
     error_value = ( pow(math.e, -param * x) - pow(math.e, -param) )\
                 / ( 1.0 - pow(math.e, -param) )
