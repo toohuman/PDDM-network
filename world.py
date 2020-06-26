@@ -1,31 +1,40 @@
 import argparse
 import networkx as nx
+import numpy as np
 import random
 import sys
-
-import numpy as np
 
 from agents.agent import Agent
 from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 50
-iteration_limit = 10000
+tests = 100
+iteration_limit = 10_000
 steady_state_threshold = 100
 
 mode = "symmetric" # ["symmetric" | "asymmetric"]
 form_closure = False
 evidence_only = False
-# demo_mode should be used to visualise performance live during simulation run
-demo_mode = False
+
+# Set the graph type
+
+# Erdos-Reyni: random | Watts-Strogatz: small-world.
+random_graphs = ["ER", "WS"]
+# What we are calling "pathological" cases.
+specialist_graphs = ["line", "star"]
+clique_graphs = [
+    "connected_star", "complete_star",
+    "caveman", "complete_caveman"
+]
+graph_type = "ER"
 
 evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
-evidence_rate = 10/100
+evidence_rate = 1.0
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
-noise_value = 1.0
+noise_value = 0.0
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
-connectivity_value = None
+connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
 comparison_errors = []
 
@@ -33,22 +42,25 @@ comparison_errors = []
 # initialisation functions later.
 init_preferences = preferences.ignorant_pref_generator
 
-def setup(
-    num_of_agents, states, agents: [], network, connectivity,
-    random_instance
+def initialisation(
+    num_of_agents, states, network, connectivity, random_instance
 ):
     """
-    This setup function runs before any other part of the code. Starting with
+    This initialisation function runs before any other part of the code. Starting with
     the creation of agents and the initialisation of relevant variables.
     """
-    agents += [Agent(init_preferences(states), form_closure) for x in range(num_of_agents)]
-    edges   = nx.gnp_random_graph(len(agents), connectivity, random_instance).edges
+    agents = [Agent(init_preferences(states), form_closure) for x in range(num_of_agents)]
+
+    if graph_type == "ER":
+        edges = nx.gnp_random_graph(num_of_agents, connectivity, random_instance).edges
+
+    edges = map(lambda x: (agents[x[0]], agents[x[1]]), edges)
     network.update(edges, agents)
 
     return
 
 def main_loop(
-    agents: [], states: int, network, true_order: [], mode: str, random_instance
+    states: int, network, true_order: [], mode: str, random_instance
 ):
     """
     The main loop performs various actions in sequence until certain conditions are
@@ -59,14 +71,21 @@ def main_loop(
     # according to the current evidence rate, have the agent perform evidential
     # updating.
     reached_convergence = True
-    for agent in agents:
+    for agent in network.nodes:
 
         if random_instance.random() <= evidence_rate:
 
             # Generate a random piece of evidence, selecting from the set of unknown states.
+            # evidence = preferences.random_evidence(
+            #     states,
+            #     true_order,
+            #     noise_value,
+            #     comparison_errors,
+            #     random_instance
+            # )
             evidence = preferences.random_evidence(
                 states,
-                true_order,
+                full_true_order,
                 noise_value,
                 comparison_errors,
                 random_instance
@@ -95,7 +114,7 @@ def main_loop(
         agent1, agent2 = agents[chosen_nodes[0]], agents[chosen_nodes[1]]
 
         new_preference = operators.combine(agent1.preferences, agent2.preferences)
-        # print(new_preference)
+
         # Symmetric, so both agents adopt the combination preference.
         agent1.update_preferences(new_preference)
         agent2.update_preferences(new_preference)
@@ -127,7 +146,7 @@ def main():
     parser.add_argument("-r", "--random", type=bool, help="Random seeding of the RNG.")
     arguments = parser.parse_args()
 
-    if connectivity_value is not None:
+    if arguments.connectivity is None and connectivity_value is not None:
         arguments.connectivity = connectivity_value
 
     if arguments.connectivity is None:
@@ -156,6 +175,7 @@ def main():
                     noise_value
                 )
             )
+    print(comparison_errors)
 
     # True state of the world
     true_order = []
@@ -187,25 +207,23 @@ def main():
     ]
     steady_state_results = np.array(steady_state_results)
 
-    # Repeat the setup and loop for the number of simulation runs required
+    # Repeat the initialisation and loop for the number of simulation runs required
     max_iteration = 0
     for test in range(tests):
 
-        agents = list()
         network = nx.Graph()
 
         # Initial setup of agents and environment.
-        setup(
+        initialisation(
             arguments.agents,
             arguments.states,
-            agents,
             network,
             arguments.connectivity,
             random_instance
         )
 
         # Pre-loop results based on agent initialisation.
-        for agent in agents:
+        for agent in network.nodes:
             # prefs = results.identify_preference(agent.preferences)
             # for pref in prefs:
             #     preference_results[0][test][pref] += 1.0 / len(prefs)
@@ -217,7 +235,7 @@ def main():
             print("Test #{} - Iteration #{}    ".format(test, iteration), end="\r")
             max_iteration = iteration if iteration > max_iteration else max_iteration
             # While not converged, continue to run the main loop.
-            if main_loop(agents, arguments.states, network, true_order, mode, random_instance):
+            if main_loop(arguments.states, network, true_order, mode, random_instance):
                 for a, agent in enumerate(agents):
                     # prefs = results.identify_preference(agent.preferences)
                     # for pref in prefs:
@@ -287,7 +305,8 @@ def main():
 
 if __name__ == "__main__":
 
-    test_set = "enc" # "standard" | "evidence" | "noise" | "en" | "enc"
+    # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
+    test_set = "standard"
 
     if test_set == "standard":
 
@@ -329,7 +348,16 @@ if __name__ == "__main__":
                 noise_value = nv
                 main()
 
-    elif test_set == "enc":
+    elif test_set == "ce":
+
+        for con in connectivity_values:
+            connectivity_value = con
+
+            for er in evidence_rates:
+                evidence_rate = er
+                main()
+
+    elif test_set == "cen":
 
         for con in connectivity_values:
             connectivity_value = con
