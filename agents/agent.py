@@ -66,8 +66,36 @@ class Agent:
         self.interactions += 1
 
 
-    def find_evidence(states, full_true_ordering, noise_value, comparison_errors, random_instance):
-        """ Generate a random piece of evidence. """
+    def find_evidence(self, states, true_prefs, noise_value, comparison_errors, random_instance):
+        """ Generate a random piece of evidence from the set of unknown preference relations. """
+
+        evidence = set()
+
+        possible_evidence = true_prefs.difference(self.preferences)
+        # print(possible_evidence)
+        try:
+            choice = random_instance.sample(possible_evidence, 1)[0]
+            # print(choice)
+        except ValueError:
+            return evidence
+
+        if noise_value is None:
+            evidence.add(choice)
+            return evidence
+
+        difference = abs(choice[0] - choice[1]) - 1
+        comp_error = comparison_errors[difference]
+
+        if random_instance.random() > comp_error:
+            evidence.add(choice)
+        else:
+            evidence.add((choice[1], choice[0]))
+
+        return evidence
+
+
+    def random_evidence(self, states, true_order, noise_value, comparison_errors, random_instance):
+        """ Generate a random piece of evidence regardless of current belief. """
 
         evidence = set()
         shuffled_states = [x for x in range(states)]
