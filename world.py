@@ -17,6 +17,9 @@ mode = "symmetric" # ["symmetric" | "asymmetric"]
 form_closure = False
 evidence_only = False
 
+
+directory = "../results/test_results/pddm-network/"
+
 # Set the graph type
 
 # Erdos-Reyni: random | Watts-Strogatz: small-world.
@@ -30,9 +33,9 @@ clique_graphs = [
 graph_type = "ER"
 
 evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
-evidence_rate = 1.0
-noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]
-noise_value = 0.0
+evidence_rate = 0.1
+noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
+noise_param = 100
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
@@ -60,7 +63,7 @@ def initialisation(
     return
 
 def main_loop(
-    states: int, network, true_order: [], mode: str, random_instance
+    states: int, network, true_prefs: [], mode: str, random_instance
 ):
     """
     The main loop performs various actions in sequence until certain conditions are
@@ -79,14 +82,14 @@ def main_loop(
             # evidence = preferences.random_evidence(
             #     states,
             #     true_order,
-            #     noise_value,
+            #     noise_param,
             #     comparison_errors,
             #     random_instance
             # )
-            evidence = preferences.random_evidence(
+            evidence = agent.find_evidence(
                 states,
-                full_true_order,
-                noise_value,
+                true_prefs,
+                noise_param,
                 comparison_errors,
                 random_instance
             )
@@ -107,11 +110,9 @@ def main_loop(
     if mode == "symmetric":
 
         try:
-            chosen_nodes = random_instance.choice(list(network.edges))
+            agent1, agent2 = random_instance.choice(list(network.edges))
         except IndexError:
             return True
-
-        agent1, agent2 = agents[chosen_nodes[0]], agents[chosen_nodes[1]]
 
         new_preference = operators.combine(agent1.preferences, agent2.preferences)
 
@@ -159,20 +160,19 @@ def main():
     random_instance.seed(128) if arguments.random == None else random_instance.seed()
 
     # Output variables
-    directory = "../results/test_results/pddm-network/"
     file_name_params = []
 
     print("Connectivity:", arguments.connectivity)
     print("Evidence rate:", evidence_rate)
-    print("Noise value:", noise_value)
+    print("Noise value:", noise_param)
 
     comparison_errors[:] = []
-    if noise_value is not None:
+    if noise_param is not None:
         for state in range(1, arguments.states):
             comparison_errors.append(
                 preferences.comparison_error(
                     state / arguments.states,
-                    noise_value
+                    noise_param
                 )
             )
     print(comparison_errors)
@@ -190,7 +190,7 @@ def main():
         opposite_prefs.add((true_order[i + 1],true_order[i]))
     true_prefs = operators.transitive_closure(true_prefs)
     opposite_prefs = operators.transitive_closure(opposite_prefs)
-
+    print(sorted(true_prefs, reverse=True))
     # Set up the collecting of results
     # preference_results = [
     #     [
@@ -235,8 +235,8 @@ def main():
             print("Test #{} - Iteration #{}    ".format(test, iteration), end="\r")
             max_iteration = iteration if iteration > max_iteration else max_iteration
             # While not converged, continue to run the main loop.
-            if main_loop(arguments.states, network, true_order, mode, random_instance):
-                for a, agent in enumerate(agents):
+            if main_loop(arguments.states, network, true_prefs, mode, random_instance):
+                for a, agent in enumerate(network.nodes):
                     # prefs = results.identify_preference(agent.preferences)
                     # for pref in prefs:
                     #     preference_results[iteration][test][pref] += 1.0 / len(prefs)
@@ -248,7 +248,7 @@ def main():
             # If the simulation has converged, end the test.
             else:
                 # print("Converged: ", iteration)
-                for a, agent in enumerate(agents):
+                for a, agent in enumerate(network.nodes):
                     # prefs = results.identify_preference(agent.preferences)
                     # for pref in prefs:
                     #     preference_results[iteration][test][pref] += 1.0 / len(prefs)
@@ -263,8 +263,8 @@ def main():
     print()
 
     # Post-loop results processing (normalisation).
-    # preference_results /= len(agents)
-    loss_results /= len(agents)
+    # preference_results /= arguments.agents
+    loss_results /= arguments.agents
 
     # Recording of results.
     # First, add parameters in sequence.
@@ -274,8 +274,8 @@ def main():
     if arguments.connectivity is not None:
         file_name_params.append("{}_con".format(arguments.connectivity))
     file_name_params.append("{:.3f}_er".format(evidence_rate))
-    if noise_value is not None:
-        file_name_params.append("{:.3f}_nv".format(noise_value))
+    if noise_param is not None:
+        file_name_params.append("{:.3f}_nv".format(noise_param))
     if form_closure is False:
         file_name_params.append("no_cl")
     # Then write the results given the parameters.
@@ -306,7 +306,7 @@ def main():
 if __name__ == "__main__":
 
     # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
-    test_set = "standard"
+    test_set = "evidence"
 
     if test_set == "standard":
 
@@ -335,8 +335,8 @@ if __name__ == "__main__":
 
     elif test_set == "noise":
 
-        for nv in noise_values:
-            noise_value = nv
+        for nv in noise_params:
+            noise_param = nv
             main()
 
     elif test_set == "en":
@@ -344,8 +344,8 @@ if __name__ == "__main__":
         for er in evidence_rates:
             evidence_rate = er
 
-            for nv in noise_values:
-                noise_value = nv
+            for nv in noise_params:
+                noise_param = nv
                 main()
 
     elif test_set == "ce":
@@ -365,6 +365,6 @@ if __name__ == "__main__":
             for er in evidence_rates:
                 evidence_rate = er
 
-                for nv in noise_values:
-                    noise_value = nv
+                for nv in noise_params:
+                    noise_param = nv
                     main()
