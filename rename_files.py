@@ -34,4 +34,4 @@ for file in files:
     # print("_".join(file_name_parts))
     file_name = "_".join(map(lambda x: str(x), file_name_parts))
     print(file_name)
-    os.rename(directory + file, directory + file_name)
+    # os.rename(directory + file, directory + file_name)
