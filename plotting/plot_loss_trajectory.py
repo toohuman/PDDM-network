@@ -6,66 +6,120 @@ import seaborn as sns; sns.set()
 PERC_LOWER = 10
 PERC_UPPER = 90
 
-states_set = [5, 10, 20, 30, 40, 50]
-agents_set = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-evidence_rates = [0.0, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0]
-er = 0.01
-# Noise levels. None specifies no noise model, but required to use the same for-loop.
-noise_levels = [0, 1, 5, 10, 20, 100]
-noise_levels = [None]
+states_set = [10, 20]
+agents_set = [100]
+evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0]
+evidence_strings = ["{:.2f}".format(x) for x in evidence_rates]
+noise_levels = [0, 1, 10, 100]
+connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
+connectivity_strings = ["{:.2f}".format(x) for x in connectivity_values]
 
 result_directory = "../../results/test_results/pddm-network/"
 
-iterations = [x for x in range(10000)]
+iterations = [x for x in range(10001)]
+conn = 1.0
 
-for noise in noise_levels:
+closure = True
+if closure:
+    closure = "_no_cl"
+else:
+    closure = ""
 
-    noise_input_string, noise_output_string = ""
-    if noise is not None:
-        noise_input_string += "_{:.3f}_nv".format(noise)
-        noise_output_string += "_{}_nv".format(noise)
+for s, states in enumerate(states_set):
+    for n, noise in enumerate(noise_levels):
+        for a, agents in enumerate(agents_set):
 
-    loss_results = np.array([[[0.0 for z in iterations] for y in agents_set] for x in states_set])
-    labels = [["" for x in agents_set] for y in states_set]
+            results = np.array([[0.0 for x in iterations] for y in evidence_rates])
+            lowers = np.array([[0.0 for x in iterations] for y in evidence_rates])
+            uppers = np.array([[0.0 for x in iterations] for y in evidence_rates])
+            data = None
 
-    for i, states in enumerate(states_set):
-        for j, agents in enumerate(agents_set):
-            file_name_parts = ["loss", agents, "agents", states, "states", "{:.3f}".format(er), "er"]
-            file_ext = ".csv"
-            file_name = "_".join(map(lambda x: str(x), file_name_parts)) + file_ext
+            for e, er in enumerate(evidence_rates):
 
-            steady_state_results = []
+                file_name_parts = [
+                    "loss",
+                    "{}a".format(agents),
+                    "{}s".format(states),
+                    "{:.2f}con".format(conn),
+                    "{:.2f}er".format(er),
+                    "{}nv".format(noise),
+                    "no_cl"
+                ]
+                file_ext = ".csv"
+                file_name = "_".join(map(lambda x: str(x), file_name_parts)) + file_ext
 
-            labels[i][j] = "{}:{}".format(states, agents)
+                try:
+                    with open(result_directory + file_name, "r") as file:
+                        # iteration = 0
+                        # for line in file:
+                        #     average_loss = np.average([float(x) for x in line.strip().split(",")])
 
-            try:
-                with open(result_directory + file_name, "r") as file:
-                    iteration = 0
-                    for line in file:
-                        average_loss = np.average([float(x) for x in line.strip().split(",")])
+                        data = [[float(x) for x in line.rstrip('\n').split(',')] for line in file]
 
-                        loss_results[i][j][iteration] = average_loss
-                        iteration += 1
-                    for k in range(iteration, len(iterations)):
-                        loss_results[i][j][k] = loss_results[i][j][iteration - 1]
+                    for i, tests in enumerate(data):
+                        # sorted_data = sorted([x[0] for x in tests])
+                        # lowers[e][i] = sorted_data[PERC_LOWER - 1]
+                        # uppers[e][i] = sorted_data[PERC_UPPER - 1]
+                        results[e][i] = np.average(tests)
 
-            except FileNotFoundError:
-                # If no file, just skip it.
-                pass
+                except FileNotFoundError:
+                    print("MISSING: " + file_name)
 
-    print(loss_results)
-    print(labels)
-    cmap = sns.cm.rocket
-    c = [cmap(x/len(states_set)) for x in range(0, len(states_set))]
-    for j, agents in enumerate(agents_set):
-        for i, states in enumerate(states_set):
-            if loss_results[i][j][0] == 0:
+                # print(data)
+
+            if data is None:
                 continue
-            ax = plt.plot(iterations, loss_results[i][j], linewidth = 2, color=c[i])
-        plt.xlabel("Iterations")
-        plt.ylabel("Average Loss")
-        plt.title("{} agents".format(agents))
-        plt.legend(states_set)
-        # plt.show()
-        plt.savefig("../../results/graphs/pddm-network/{}_agents_{}_er.pdf".format(agents, er))
-        plt.clf()
+
+            # print(loss_results)
+            convergence_times = [0 for x in evidence_rates]
+            max_iteration = 0
+            iterations_maxed = False
+            import math
+            for e, er_results in enumerate(results):
+                for i, iteration in enumerate(er_results):
+                    if math.isclose(iteration, 0):
+                        convergence_times[e] = i
+                        if i > max_iteration:
+                            max_iteration = i
+                        break
+                    elif i == len(er_results) - 1:
+                        convergence_times[e] = -1
+                        iterations_maxed = True
+
+            # max_iteration += 50 if not iterations_maxed else int(len(iterations)/2)
+
+            print("{} states | {} agents | {:.2f} noise".format(states, agents, noise))
+            for e, er in enumerate(evidence_rates):
+                print("   [{:.2f} er]: {} t".format(er, convergence_times[e]))
+
+
+            sns.set_palette("rocket", len(evidence_rates))
+            for e, er in reversed(list(enumerate(evidence_rates))):
+                ax = sns.lineplot(iterations, results[e], linewidth = 2, color=sns.color_palette()[e], label=evidence_strings[e])
+                plt.fill_between(iterations, lowers[e], uppers[e], facecolor=sns.color_palette()[e], edgecolor="none", alpha=0.3, antialiased=True)
+            # plt.axhline(noise, color="red", linestyle="dotted", linewidth = 2)
+            plt.xlabel(r'Time $t$')
+            plt.ylabel("Average Error")
+            plt.ylim(-0.01, 0.525)
+            plt.xlim(0, 10000)
+            # plt.title("Average loss | {} states, {} er, {} noise".format(states, er, noise))
+
+            ax.get_legend().remove()
+
+            # import pylab
+            # fig_legend = pylab.figure(figsize=(1,2))
+            # pylab.figlegend(*ax.get_legend_handles_labels(), loc="upper left", ncol=len(connectivity_strings))
+            # fig_legend.show()
+            # plt.show()
+
+            # import time
+            # time.sleep(10)
+
+            plt.tight_layout()
+            # Complete graph
+            if conn == 1.0:
+                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_{}_states_{}_agents_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
+            # Evidence-only graph
+            elif conn == 0.0:
+                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_ev_only_{}_states_{}_agents_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
+            plt.clf()
