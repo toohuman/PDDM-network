@@ -29,6 +29,28 @@ def loss(preferences, true_preferences, normalised = True):
     return differences
 
 
+def uncertainty(preferences, true_preferences, normalised = True):
+    """
+    Calculate the number if "missing" or "absent" preference pairs in an agent's
+    belief compared to the number in the true preference ordering, as this will
+    identify how "uncertaint" the agent is.
+
+    Normalised, this provides us with an uncertainty metric in [0, 1] where
+    ignorant agents start out completely uncertain and decrease their uncertainty
+    over time.
+    """
+
+    # Sum the total of missing pairs of preference relations.
+    differences = abs(len(true_preferences) - len(preferences))
+
+    # If normalising the result (default) then divide the sum of the differences
+    # by the length of the maximum number of pairs of relations.
+    if normalised:
+        return differences / len(true_preferences)
+
+    return differences
+
+
 def write_to_file(directory, file_name, params, data, max, array_data = False):
     """
     Write the results arrays to a file. The array_data argument allows us to write
