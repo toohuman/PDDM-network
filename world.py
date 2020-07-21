@@ -10,8 +10,9 @@ from utilities import preferences
 from utilities import results
 
 tests = 100
-iteration_limit = 10_000
+iteration_limit = 5_000
 steady_state_threshold = 100
+trajectory_populations = [10, 100]
 
 mode = "symmetric" # ["symmetric" | "asymmetric"]
 form_closure = False
@@ -21,7 +22,6 @@ evidence_only = False
 directory = "../results/test_results/pddm-network/"
 
 # Set the graph type
-
 # Erdos-Reyni: random | Watts-Strogatz: small-world.
 random_graphs = ["ER", "WS"]
 # What we are calling "pathological" cases.
@@ -32,10 +32,10 @@ clique_graphs = [
 ]
 graph_type = "ER"
 
-evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.1
 noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 100
+noise_param = 0
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
@@ -191,21 +191,21 @@ def main():
     true_prefs = operators.transitive_closure(true_prefs)
     opposite_prefs = operators.transitive_closure(opposite_prefs)
     print(sorted(true_prefs, reverse=True))
+
     # Set up the collecting of results
-    # preference_results = [
-    #     [
-    #         [0.0 for x in range(arguments.states)] for y in range(tests)
-    #     ] for z in range(iteration_limit + 1)
-    # ]
-    # preference_results = np.array(preference_results)
-    loss_results = [
+    loss_results = np.array([
         [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
-    ]
-    loss_results = np.array(loss_results)
-    steady_state_results = [
+    ])
+    steady_state_loss_results = np.array([
         [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
-    ]
-    steady_state_results = np.array(steady_state_results)
+    ])
+
+    uncertainty_results = np.array([
+        [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
+    ])
+    steady_state_uncertainty_results = np.array([
+        [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
+    ])
 
     # Repeat the initialisation and loop for the number of simulation runs required
     max_iteration = 0
@@ -224,10 +224,8 @@ def main():
 
         # Pre-loop results based on agent initialisation.
         for agent in network.nodes:
-            # prefs = results.identify_preference(agent.preferences)
-            # for pref in prefs:
-            #     preference_results[0][test][pref] += 1.0 / len(prefs)
             loss_results[0][test] += results.loss(agent.preferences, true_prefs)
+            uncertainty_results[0][test] += results.uncertainty(agent.preferences, true_prefs)
 
         # Main loop of the experiments. Starts at 1 because we have recorded the agents'
         # initial state above, at the "0th" index.
@@ -237,45 +235,55 @@ def main():
             # While not converged, continue to run the main loop.
             if main_loop(arguments.states, network, true_prefs, mode, random_instance):
                 for a, agent in enumerate(network.nodes):
-                    # prefs = results.identify_preference(agent.preferences)
-                    # for pref in prefs:
-                    #     preference_results[iteration][test][pref] += 1.0 / len(prefs)
                     loss = results.loss(agent.preferences, true_prefs)
                     loss_results[iteration][test] += loss
+                    uncertainty = results.uncertainty(agent.preferences, true_prefs)
+                    uncertainty_results[iteration][test] += uncertainty
                     if iteration == iteration_limit:
-                        steady_state_results[test][a] = loss
+                        steady_state_loss_results[test][a] = loss
+                        steady_state_uncertainty_results[test][a] = uncertainty
 
             # If the simulation has converged, end the test.
             else:
                 # print("Converged: ", iteration)
                 for a, agent in enumerate(network.nodes):
-                    # prefs = results.identify_preference(agent.preferences)
-                    # for pref in prefs:
-                    #     preference_results[iteration][test][pref] += 1.0 / len(prefs)
                     loss = results.loss(agent.preferences, true_prefs)
                     loss_results[iteration][test] += loss
-                    steady_state_results[test][a] = loss
+                    uncertainty = results.uncertainty(agent.preferences, true_prefs)
+                    uncertainty_results[iteration][test] += uncertainty
+                    steady_state_loss_results[test][a] = loss
+                    steady_state_uncertainty_results[test][a] = uncertainty
                 for iter in range(iteration + 1, iteration_limit + 1):
-                    # preference_results[iter][test] = np.copy(preference_results[iteration][test])
                     loss_results[iter][test] = np.copy(loss_results[iteration][test])
+                    uncertainty_results[iter][test] = np.copy(uncertainty_results[iteration][test])
                 # Simulation has converged, so break main loop.
                 break
     print()
 
     # Post-loop results processing (normalisation).
-    # preference_results /= arguments.agents
     loss_results /= arguments.agents
+    uncertainty_results /= arguments.agents
 
-    # Recording of results.
-    # First, add parameters in sequence.
-    # directory += "{0}/{1}/".format(arguments.agents, arguments.states)
-    file_name_params.append("{}_agents".format(arguments.agents))
-    file_name_params.append("{}_states".format(arguments.states))
-    if arguments.connectivity is not None:
-        file_name_params.append("{}_con".format(arguments.connectivity))
-    file_name_params.append("{:.3f}_er".format(evidence_rate))
+    # Recording of results. First, add parameters in sequence.
+
+    file_name_params.append("{}a".format(arguments.agents))
+    file_name_params.append("{}s".format(arguments.states))
+
+    if graph_type == "ER":
+        if arguments.connectivity is not None:
+            file_name_params.append("{:.2f}con".format(arguments.connectivity))
+    elif graph_type == "WS":
+        if arguments.connectivity is not None and arguments.knn is not None:
+            file_name_params.append("{}k".format(arguments.knn))
+            file_name_params.append("{:.2f}con".format(arguments.connectivity))
+    elif graph_type in specialist_graphs + clique_graphs:
+        file_name_params.append("{}".format(graph_type))
+        if graph_type in clique_graphs:
+            file_name_params.append("{}".format(clique_size))
+
+    file_name_params.append("{:.2f}er".format(evidence_rate))
     if noise_param is not None:
-        file_name_params.append("{:.3f}_nv".format(noise_param))
+        file_name_params.append("{}nv".format(noise_param))
     if form_closure is False:
         file_name_params.append("no_cl")
     # Then write the results given the parameters.
@@ -287,18 +295,38 @@ def main():
     #     max_iteration,
     #     array_data = True
     # )
-    results.write_to_file(
-        directory,
-        "loss",
-        file_name_params,
-        loss_results,
-        max_iteration
-    )
+
+    if arguments.agents in trajectory_populations:
+        results.write_to_file(
+            directory,
+            "loss",
+            file_name_params,
+            loss_results,
+            max_iteration
+        )
+
     results.write_to_file(
         directory,
         "steady_state_loss",
         file_name_params,
-        steady_state_results,
+        steady_state_loss_results,
+        tests
+    )
+
+    if arguments.agents in trajectory_populations:
+        results.write_to_file(
+            directory,
+            "uncertainty",
+            file_name_params,
+            uncertainty_results,
+            max_iteration
+        )
+
+    results.write_to_file(
+        directory,
+        "steady_state_uncertainty",
+        file_name_params,
+        steady_state_uncertainty_results,
         tests
     )
 
@@ -306,7 +334,7 @@ def main():
 if __name__ == "__main__":
 
     # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
-    test_set = "evidence"
+    test_set = "en"
 
     if test_set == "standard":
 
