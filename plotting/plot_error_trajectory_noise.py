@@ -32,7 +32,7 @@ for i, states in enumerate(states_set):
 
         labels = ["{}:{} - {}".format(states, agents, noise) for noise in noise_levels]
 
-        loss_results = np.array([[0.0 for z in iterations] for y in noise_levels])
+        error_results = np.array([[0.0 for z in iterations] for y in noise_levels])
 
         results_found = False
 
@@ -46,9 +46,9 @@ for i, states in enumerate(states_set):
                 noise_output_string += "_{}_nv".format(noise)
 
             if closure:
-                file_name_parts = ["loss", agents, "agents", states, "states", "{:.3f}".format(er), "er", closure_string[1:], "{:.3f}".format(noise), "nv"]
+                file_name_parts = ["error", agents, "agents", states, "states", "{:.3f}".format(er), "er", closure_string[1:], "{:.3f}".format(noise), "nv"]
             else:
-                file_name_parts = ["loss", agents, "agents", states, "states", "{:.3f}".format(er), "er", "{:.3f}".format(noise), "nv"]
+                file_name_parts = ["error", agents, "agents", states, "states", "{:.3f}".format(er), "er", "{:.3f}".format(noise), "nv"]
             file_ext = ".csv"
             file_name = "_".join(map(lambda x: str(x), file_name_parts)) + file_ext
 
@@ -56,14 +56,14 @@ for i, states in enumerate(states_set):
                 with open(result_directory + file_name, "r") as file:
                     iteration = 0
                     for line in file:
-                        average_loss = np.average([float(x) for x in line.strip().split(",")])
-                        loss_results[n][iteration] = average_loss
+                        average_error = np.average([float(x) for x in line.strip().split(",")])
+                        error_results[n][iteration] = average_error
                         iteration += 1
                     for k in range(iteration, len(iterations)):
-                        loss_results[n][k] = loss_results[n][iteration - 1]
+                        error_results[n][k] = error_results[n][iteration - 1]
 
                 results_found = True
-                print(loss_results[n])
+                print(error_results[n])
 
             except FileNotFoundError:
                 # If no file, just skip it.
@@ -76,13 +76,13 @@ for i, states in enumerate(states_set):
         cmap = sns.cm.rocket
         c = [cmap(x/len(noise_levels)) for x in range(0, len(noise_levels))]
         for n, noise in enumerate(noise_levels):
-            # if loss_results[n][0] == 0:
+            # if error_results[n][0] == 0:
             #     continue
-            if loss_results[n][0] == 0:
+            if error_results[n][0] == 0:
                 continue
-            ax = plt.plot(iterations, loss_results[n], linewidth = 2, color=c[n])
+            ax = plt.plot(iterations, error_results[n], linewidth = 2, color=c[n])
         plt.xlabel("Iterations")
-        plt.ylabel("Average Loss")
+        plt.ylabel("Average error")
         plt.title("{} agents, {} states".format(agents, states))
         plt.legend(noise_levels)
         if states == 10:

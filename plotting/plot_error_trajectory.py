@@ -37,7 +37,7 @@ for s, states in enumerate(states_set):
             for e, er in enumerate(evidence_rates):
 
                 file_name_parts = [
-                    "loss",
+                    "error",
                     "{}a".format(agents),
                     "{}s".format(states),
                     "{:.2f}con".format(conn),
@@ -52,7 +52,7 @@ for s, states in enumerate(states_set):
                     with open(result_directory + file_name, "r") as file:
                         # iteration = 0
                         # for line in file:
-                        #     average_loss = np.average([float(x) for x in line.strip().split(",")])
+                        #     average_error = np.average([float(x) for x in line.strip().split(",")])
 
                         data = [[float(x) for x in line.rstrip('\n').split(',')] for line in file]
 
@@ -70,7 +70,7 @@ for s, states in enumerate(states_set):
             if data is None:
                 continue
 
-            # print(loss_results)
+            # print(error_results)
             convergence_times = [0 for x in evidence_rates]
             max_iteration = 0
             iterations_maxed = False
@@ -102,7 +102,7 @@ for s, states in enumerate(states_set):
             plt.ylabel("Average Error")
             plt.ylim(-0.01, 0.525)
             plt.xlim(0, 4000)
-            # plt.title("Average loss | {} states, {} er, {} noise".format(states, er, noise))
+            # plt.title("Average error | {} states, {} er, {} noise".format(states, er, noise))
 
             ax.get_legend().remove()
 
@@ -118,8 +118,8 @@ for s, states in enumerate(states_set):
             plt.tight_layout()
             # Complete graph
             if conn == 1.0:
-                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_{}_agents_{}_states_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
+                plt.savefig("../../results/graphs/pddm-network/error_trajectory_{}_agents_{}_states_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
             # Evidence-only graph
             elif conn == 0.0:
-                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_ev_only_{}_agents_{}_states_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
+                plt.savefig("../../results/graphs/pddm-network/error_trajectory_ev_only_{}_agents_{}_states_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
             plt.clf()

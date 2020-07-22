@@ -193,10 +193,10 @@ def main():
     print(sorted(true_prefs, reverse=True))
 
     # Set up the collecting of results
-    loss_results = np.array([
+    error_results = np.array([
         [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
     ])
-    steady_state_loss_results = np.array([
+    steady_state_error_results = np.array([
         [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
     ])
 
@@ -224,7 +224,7 @@ def main():
 
         # Pre-loop results based on agent initialisation.
         for agent in network.nodes:
-            loss_results[0][test] += results.loss(agent.preferences, true_prefs)
+            error_results[0][test] += results.error(agent.preferences, true_prefs)
             uncertainty_results[0][test] += results.uncertainty(agent.preferences, true_prefs)
 
         # Main loop of the experiments. Starts at 1 because we have recorded the agents'
@@ -235,33 +235,33 @@ def main():
             # While not converged, continue to run the main loop.
             if main_loop(arguments.states, network, true_prefs, mode, random_instance):
                 for a, agent in enumerate(network.nodes):
-                    loss = results.loss(agent.preferences, true_prefs)
-                    loss_results[iteration][test] += loss
+                    error = results.error(agent.preferences, true_prefs)
+                    error_results[iteration][test] += error
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     if iteration == iteration_limit:
-                        steady_state_loss_results[test][a] = loss
+                        steady_state_error_results[test][a] = error
                         steady_state_uncertainty_results[test][a] = uncertainty
 
             # If the simulation has converged, end the test.
             else:
                 # print("Converged: ", iteration)
                 for a, agent in enumerate(network.nodes):
-                    loss = results.loss(agent.preferences, true_prefs)
-                    loss_results[iteration][test] += loss
+                    error = results.error(agent.preferences, true_prefs)
+                    error_results[iteration][test] += error
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
-                    steady_state_loss_results[test][a] = loss
+                    steady_state_error_results[test][a] = error
                     steady_state_uncertainty_results[test][a] = uncertainty
                 for iter in range(iteration + 1, iteration_limit + 1):
-                    loss_results[iter][test] = np.copy(loss_results[iteration][test])
+                    error_results[iter][test] = np.copy(error_results[iteration][test])
                     uncertainty_results[iter][test] = np.copy(uncertainty_results[iteration][test])
                 # Simulation has converged, so break main loop.
                 break
     print()
 
     # Post-loop results processing (normalisation).
-    loss_results /= arguments.agents
+    error_results /= arguments.agents
     uncertainty_results /= arguments.agents
 
     # Recording of results. First, add parameters in sequence.
@@ -299,17 +299,17 @@ def main():
     if arguments.agents in trajectory_populations:
         results.write_to_file(
             directory,
-            "loss",
+            "error",
             file_name_params,
-            loss_results,
+            error_results,
             max_iteration
         )
 
     results.write_to_file(
         directory,
-        "steady_state_loss",
+        "steady_state_error",
         file_name_params,
-        steady_state_loss_results,
+        steady_state_error_results,
         tests
     )
 

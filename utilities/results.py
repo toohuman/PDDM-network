@@ -2,9 +2,9 @@
 # preferences, as well as writing the results to a file.
 
 
-def loss(preferences, true_preferences, normalised = True):
+def error(preferences, true_preferences, normalised = True):
     """
-    Named after the loss function in machine learning, this function calculates
+    Inspired by a loss function in machine learning, this function calculates
     the sum of the differences of two matrices, scaled by 0.5 so that we count
     half-values for having no preference between two elements.
     The idea is that we compare the agent's preferences with the true state of

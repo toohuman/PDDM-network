@@ -19,7 +19,7 @@ for j, agents in enumerate(agents_set):
 
     for i, states in enumerate(reversed(states_set)):
         for n, noise in enumerate(noise_values):
-            file_name_parts = ["loss", agents, "agents", states, "states", "{:.3f}".format(er), "er", "{:.3f}".format(noise), "nv"]
+            file_name_parts = ["error", agents, "agents", states, "states", "{:.3f}".format(er), "er", "{:.3f}".format(noise), "nv"]
             file_ext = ".csv"
             file_name = "_".join(map(lambda x: str(x), file_name_parts)) + file_ext
 
@@ -34,9 +34,9 @@ for j, agents in enumerate(agents_set):
 
                 steady_state_results = [float(x) for x in steady_state_results.strip().split(",")]
 
-                average_loss = np.average(steady_state_results)
+                average_error = np.average(steady_state_results)
 
-                heatmap_results[i][n] = average_loss
+                heatmap_results[i][n] = average_error
 
             except FileNotFoundError:
                 # Add obvious missing entry into final results array here

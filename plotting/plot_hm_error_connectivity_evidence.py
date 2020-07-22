@@ -28,7 +28,7 @@ for a, agents in enumerate(agents_set):
                 for c, con in enumerate(connectivity_values):
 
                     file_name_parts = [
-                        "loss",
+                        "error",
                         agents, "agents",
                         states, "states",
                         "{}".format(con),"con",
@@ -40,7 +40,7 @@ for a, agents in enumerate(agents_set):
                     file_name = "_".join(map(lambda x: str(x), file_name_parts)) + file_ext
 
                     steady_state_results = []
-                    average_loss = 0.0
+                    average_error = 0.0
 
                     try:
                         with open(result_directory + file_name, "r") as file:
@@ -49,9 +49,9 @@ for a, agents in enumerate(agents_set):
 
                         steady_state_results = [float(x) for x in steady_state_results.strip().split(",")]
 
-                        average_loss = np.average(steady_state_results)
+                        average_error = np.average(steady_state_results)
 
-                        heatmap_results[e][c] = average_loss
+                        heatmap_results[e][c] = average_error
 
                         skip = False
 
@@ -78,8 +78,8 @@ for a, agents in enumerate(agents_set):
                 fmt=".2f",
                 square=True
             )
-            plt.title("Average loss | {} agents, {} states, {} noise".format(agents, states, noise))
+            plt.title("Average error | {} agents, {} states, {} noise".format(agents, states, noise))
             ax.set(xlabel='Connectivity', ylabel='Evidence rate')
             # plt.show()
-            plt.savefig("../../results/graphs/pddm-network/hm_loss_{}_agents_{}_states_{:.2f}_noise_er_con.pdf".format(agents, states, noise), bbox_inches="tight")
+            plt.savefig("../../results/graphs/pddm-network/hm_error_{}_agents_{}_states_{:.2f}_noise_er_con.pdf".format(agents, states, noise), bbox_inches="tight")
             plt.clf()

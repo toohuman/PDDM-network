@@ -32,7 +32,7 @@ for s, states in enumerate(states_set):
         for e, er in enumerate(evidence_rates):
             for a, agents in enumerate(agents_set):
                 file_name_parts = [
-                    "steady_state_loss",
+                    "steady_state_error",
                     "{}s".format(states),
                     "{}a".format(agents),
                     "{:.2f}con".format(connectivity_value),
@@ -84,7 +84,7 @@ for s, states in enumerate(states_set):
                 plt.ylim(-0.01, noise + (noise * 0.3))
             elif connectivity_value == 0.0:
                 plt.ylim(noise - 0.05, noise + 0.05)
-        # plt.title("Average loss | {} states, {} er, {} noise".format(states, er, noise))
+        # plt.title("Average error | {} states, {} er, {} noise".format(states, er, noise))
 
         ax.get_legend().remove()
 
@@ -100,8 +100,8 @@ for s, states in enumerate(states_set):
         plt.tight_layout()
         # Complete graph
         if connectivity_value == 1.0:
-            plt.savefig("../../results/graphs/sotw-network/loss_complete_{}_states_{:.2f}_noise.pdf".format(states, noise))
+            plt.savefig("../../results/graphs/sotw-network/error_complete_{}_states_{:.2f}_noise.pdf".format(states, noise))
         # Evidence-only graph
         elif connectivity_value == 0.0:
-            plt.savefig("../../results/graphs/sotw-network/loss_complete_ev_only_{}_states_{:.2f}_noise.pdf".format(states, noise))
+            plt.savefig("../../results/graphs/sotw-network/error_complete_ev_only_{}_states_{:.2f}_noise.pdf".format(states, noise))
         plt.clf()
