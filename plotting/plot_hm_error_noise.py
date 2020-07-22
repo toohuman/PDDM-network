@@ -8,7 +8,7 @@ PERC_UPPER = 90
 
 states_set = [10, 20, 30]
 agents_set = [10, 50, 100]
-noise_values = [0, 1, 5, 10, 20, 100]
+noise_values = [0, 1, 10, 100]
 er = 0.05
 
 result_directory = "../../results/test_results/pddm-network/"

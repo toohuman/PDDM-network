@@ -7,7 +7,7 @@ PERC_LOWER = 10
 PERC_UPPER = 90
 
 agents_set = [100]
-states_set = [10]
+states_set = [10, 20]
 evidence_rates = [0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_strings = ["{:.3f}".format(x) for x in evidence_rates]
 noise_values = [0.0, 1.0, 5.0, 10.0, 20.0, 100.0]

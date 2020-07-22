@@ -7,10 +7,10 @@ PERC_LOWER = 10
 PERC_UPPER = 90
 
 states_set = [10, 20]
-agents_set = [100]
+agents_set = [10, 100]
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_strings = ["{:.2f}".format(x) for x in evidence_rates]
-noise_levels = [0, 1, 10, 100]
+noise_levels = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_strings = ["{:.2f}".format(x) for x in connectivity_values]
 
@@ -57,9 +57,9 @@ for s, states in enumerate(states_set):
                         data = [[float(x) for x in line.rstrip('\n').split(',')] for line in file]
 
                     for i, tests in enumerate(data):
-                        # sorted_data = sorted([x[0] for x in tests])
-                        # lowers[e][i] = sorted_data[PERC_LOWER - 1]
-                        # uppers[e][i] = sorted_data[PERC_UPPER - 1]
+                        sorted_data = sorted(tests)
+                        lowers[e][i] = sorted_data[PERC_LOWER - 1]
+                        uppers[e][i] = sorted_data[PERC_UPPER - 1]
                         results[e][i] = np.average(tests)
 
                 except FileNotFoundError:
@@ -101,7 +101,7 @@ for s, states in enumerate(states_set):
             plt.xlabel(r'Time $t$')
             plt.ylabel("Average Error")
             plt.ylim(-0.01, 0.525)
-            plt.xlim(0, 10000)
+            plt.xlim(0, 4000)
             # plt.title("Average loss | {} states, {} er, {} noise".format(states, er, noise))
 
             ax.get_legend().remove()
@@ -118,8 +118,8 @@ for s, states in enumerate(states_set):
             plt.tight_layout()
             # Complete graph
             if conn == 1.0:
-                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_{}_states_{}_agents_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
+                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_{}_agents_{}_states_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
             # Evidence-only graph
             elif conn == 0.0:
-                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_ev_only_{}_states_{}_agents_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
+                plt.savefig("../../results/graphs/pddm-network/loss_trajectory_ev_only_{}_agents_{}_states_{:.2f}_noise{}.pdf".format(agents, states, noise, closure))
             plt.clf()
