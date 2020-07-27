@@ -53,8 +53,14 @@ def uncertainty(preferences, true_preferences, normalised = True):
 
 def expected_error(noise_param, states):
     """
-
+    The expected error of the system given noise_param lambda and the number
+    of states. With the number of states we can identify the total number of
+    comparisons nC2. Then, we can identify the number of comparisons of
+    distance 1 = n-1, 2 = n-2, ..., n-1 = 1. The expected error is then given
+    by the sum of multiplying each comparison error by the probability of that
+    comparison occurring.
     """
+
     from math import comb
     import preferences
 
