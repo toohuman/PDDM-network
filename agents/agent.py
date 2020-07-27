@@ -31,8 +31,8 @@ class Agent:
 
         # Form the transitive closure of the combined preference
         # prior to updating.
-        if self.form_closure:
-            operators.transitive_closure(preferences)
+        # if self.form_closure:
+        #     operators.transitive_closure(preferences)
 
         # Track the number of iterations.
         if preferences == self.preferences:
@@ -53,8 +53,8 @@ class Agent:
 
         # Form the transitive closure of the combined preference
         # prior to updating.
-        if self.form_closure:
-            operators.transitive_closure(preferences)
+        # if self.form_closure:
+        #     operators.transitive_closure(preferences)
 
         # Track the number of iterations.
         if preferences == self.preferences:
