@@ -51,6 +51,30 @@ def uncertainty(preferences, true_preferences, normalised = True):
     return differences
 
 
+def expected_error(noise_param, states):
+    """
+
+    """
+    from math import comb
+    import preferences
+
+    comparison_errors = [
+        preferences.comparison_error(
+            state / states,
+            noise_param
+        )
+        for state in range(1, states)
+    ]
+
+    n_choose_2 = comb(states, 2)
+
+    expected_error = 0.0
+    for i, p in enumerate([(states - x)/n_choose_2 for x in range(1, states)]):
+        expected_error += p * comparison_errors[i]
+
+    return round(expected_error, 3)
+
+
 def write_to_file(directory, file_name, params, data, max, array_data = False):
     """
     Write the results arrays to a file. The array_data argument allows us to write
@@ -78,3 +102,10 @@ def write_to_file(directory, file_name, params, data, max, array_data = False):
             if i > max:
                 break
 
+
+if __name__ == '__main__':
+
+    noise_param = 0
+    print("Expected error for {} states and lambda = {}: {}".format(x := 5, noise_param, expected_error(0, x)))
+    print("Expected error for {} states and lambda = {}: {}".format(x := 10, noise_param, expected_error(0, x)))
+    print("Expected error for {} states and lambda = {}: {}".format(x := 20, noise_param, expected_error(0, x)))
