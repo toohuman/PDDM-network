@@ -11,7 +11,7 @@ def combine(prefs1, prefs2, form_closure):
     preferences = set(consistent_prefs)
 
     if form_closure:
-        transitive_closure(preferences)
+        preferences = transitive_closure(preferences)
 
     return preferences
 
