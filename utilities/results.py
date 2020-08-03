@@ -99,7 +99,10 @@ def write_to_file(directory, file_name, params, data, max, array_data = False):
                             file.write(',')
                     file.write(']')
                 else:
-                    file.write('{:.4f}'.format(results_data))
+                    if isinstance(results_data, str):
+                        file.write('{}'.format(results_data))
+                    else:
+                        file.write('{:.4f}'.format(results_data))
                 # Determine whether the line ends here
                 if j != len(test_data) - 1:
                     file.write(',')
