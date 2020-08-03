@@ -3,16 +3,17 @@ import networkx as nx
 import numpy as np
 import random
 import sys
+import time
 
-from agents.agent import Agent
+from agents.agent import *
 from utilities import operators
 from utilities import preferences
 from utilities import results
 
 tests = 100
-iteration_limit = 5_000
+iteration_limit = 10_000
 steady_state_threshold = 100
-trajectory_populations = [10, 100]
+trajectory_populations = [10, 50, 100]
 
 mode = "symmetric" # ["symmetric" | "asymmetric"]
 form_closure = False
@@ -32,10 +33,10 @@ clique_graphs = [
 ]
 graph_type = "ER"
 
-evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0]
-evidence_rate = 0.1
-noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 0
+evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
+evidence_rate = 0.05
+noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
+noise_param = 100
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
@@ -93,7 +94,7 @@ def main_loop(
                 comparison_errors,
                 random_instance
             )
-            agent.evidential_updating(operators.combine(agent.preferences, evidence))
+            agent.evidential_updating(operators.combine(agent.preferences, evidence, form_closure))
 
         reached_convergence &= agent.steady_state(steady_state_threshold)
 
@@ -114,7 +115,7 @@ def main_loop(
         except IndexError:
             return True
 
-        new_preference = operators.combine(agent1.preferences, agent2.preferences)
+        new_preference = operators.combine(agent1.preferences, agent2.preferences, form_closure)
 
         # Symmetric, so both agents adopt the combination preference.
         agent1.update_preferences(new_preference)
@@ -165,6 +166,7 @@ def main():
     print("Connectivity:", arguments.connectivity)
     print("Evidence rate:", evidence_rate)
     print("Noise value:", noise_param)
+    print("Closure:", form_closure)
 
     comparison_errors[:] = []
     if noise_param is not None:
@@ -207,9 +209,18 @@ def main():
         [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
     ])
 
+    process_time_results = [ 0.0 for y in range(tests + 1) ]
+    runtime_results = [ 0.0 for y in range(tests + 1) ]
+
+    init_proc_time = time.process_time()
+    init_runtime = time.time()
+
     # Repeat the initialisation and loop for the number of simulation runs required
     max_iteration = 0
     for test in range(tests):
+
+        start_runtime = time.time()
+        start_proc_time = time.process_time()
 
         network = nx.Graph()
 
@@ -258,7 +269,17 @@ def main():
                     uncertainty_results[iter][test] = np.copy(uncertainty_results[iteration][test])
                 # Simulation has converged, so break main loop.
                 break
+
+        process_time_results[test] = time.time() - start_runtime
+        runtime_results[test] = time.process_time() - start_proc_time
+
     print()
+
+    # Timing results
+    process_time_results = ["Process time"] + process_time_results
+    runtime_results = ["Runtime"] + runtime_results
+    process_time_results[-1] =  time.process_time() - init_proc_time
+    runtime_results[-1] = time.time() - init_runtime
 
     # Post-loop results processing (normalisation).
     error_results /= arguments.agents
@@ -328,6 +349,14 @@ def main():
         file_name_params,
         steady_state_uncertainty_results,
         tests
+    )
+
+    results.write_to_file(
+        directory,
+        "timings",
+        file_name_params,
+        [process_time_results, runtime_results],
+        2
     )
 
 
