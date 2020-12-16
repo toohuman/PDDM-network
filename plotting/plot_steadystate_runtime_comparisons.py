@@ -72,6 +72,7 @@ for s, states in enumerate(states_set):
 
             print("Average Error: {} states | {:.2f} evidence rate | {:.2f} noise".format(states, er, noise))
             for c, cl in enumerate(closure):
+                print("{}: ".format(closure_strings[c]), end=" ")
                 for a, agents in enumerate(agents_set):
                     print("[{}a]: {:.3f}".format(agents, results[c][a]), end=" ")
                 print("")
@@ -85,7 +86,8 @@ for s, states in enumerate(states_set):
             # plt.axhline(expected_error(noise, states), color="red", linestyle="dotted", linewidth = 2)
             plt.xlabel("Agents")
             plt.ylabel("Average runtime (seconds)")
-            # plt.ylim(-0.01, 0.425)
+            # plt.ylim(-0.1, 11) # 10 states
+            plt.ylim(-0.1, 210) # 20 states
             # if noise == 0:
             #     plt.ylim(-0.05, 0.05)
             # elif noise == 0.5:

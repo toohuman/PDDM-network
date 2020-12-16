@@ -33,10 +33,12 @@ clique_graphs = [
 ]
 graph_type = "ER"
 
+fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Percentage of edges that are active during each iteration for fusion
+fusion_rate = 1
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
-evidence_rate = 0.05
+evidence_rate = 0.1
 noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 100
+noise_param = 0.0
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
@@ -363,7 +365,7 @@ def main():
 if __name__ == "__main__":
 
     # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
-    test_set = "en"
+    test_set = "standard"
 
     if test_set == "standard":
 

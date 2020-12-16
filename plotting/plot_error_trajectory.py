@@ -20,7 +20,7 @@ connectivity_strings = ["{:.2f}".format(x) for x in connectivity_values]
 iterations = [x for x in range(10001)]
 conn = 1.0
 
-closure = True
+closure = False
 if closure is False:
     closure = "_no_cl"
 else:
@@ -85,7 +85,7 @@ for s, states in enumerate(states_set):
                         convergence_times[e] += "{} t [converged @ {}]".format(i, iteration)
                         break
                     elif i == len(er_results) - 1:
-                        convergence_times[e] = -1
+                        convergence_times[e] = "-1 t [ended @ {}]".format(iteration)
                     elif math.isclose(iteration, prev_iteration):
                         convergence_counter += 1
                     else:
@@ -108,7 +108,7 @@ for s, states in enumerate(states_set):
                 plt.xlabel(r'Time $t$')
                 plt.ylabel("Average Error")
                 plt.ylim(-0.01, 0.525)
-                plt.xlim(0, 4000)
+                plt.xlim(0, 3000)
                 # plt.title("Average error | {} states, {} er, {} noise".format(states, er, noise))
 
                 ax.get_legend().remove()

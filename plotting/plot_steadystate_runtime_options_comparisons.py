@@ -6,17 +6,18 @@ import numpy as np
 import pickle
 import seaborn as sns; sns.set(font_scale=1.3)
 import sys
-sys.path.append("../utilities")
-from results import *
 
 PERC_LOWER = 10
 PERC_UPPER = 90
 
-states_set = [10, 20]
-agents_set = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0]
+states_set = [5, 10, 15, 20, 25]
+# agents_set = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+agents_set = [100]
+# evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0]
+evidence_rates = [0.1]
 evidence_strings = ["{:.2f}".format(x) for x in evidence_rates]
-noise_values = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
+# noise_values = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
+noise_values = [0.0, 5.0, 10.0, 100.0]
 connectivity_value = 1.0
 
 closure = ["", "_no_cl"]
@@ -24,24 +25,22 @@ closure_strings = ["With", "Without"]
 
 result_directory = "../../results/test_results/pddm-network/"
 
-for s, states in enumerate(states_set):
+for a, agents in enumerate(agents_set):
     for n, noise in enumerate(noise_values):
         for e, er in enumerate(evidence_rates):
 
-            results = np.array([[0.0 for x in agents_set] for y in closure])
-            lowers = np.array([[0.0 for x in agents_set] for y in closure])
-            uppers = np.array([[0.0 for x in agents_set] for y in closure])
+            results = np.array([[0.0 for x in states_set] for y in closure])
+            lowers = np.array([[0.0 for x in states_set] for y in closure])
+            uppers = np.array([[0.0 for x in states_set] for y in closure])
 
             data = None
 
-            skip = True
-
             whole_agent_set = True
             for c, cl in enumerate(closure):
-                for a, agents in enumerate(agents_set):
+                for s, states in enumerate(states_set):
 
                     file_name_parts = [
-                        "steady_state_error",
+                        "timings",
                         "{}a".format(agents),
                         "{}s".format(states),
                         "{:.2f}con".format(connectivity_value),
@@ -57,37 +56,40 @@ for s, states in enumerate(states_set):
                             # for line in file:
                             #     average_error = np.average([float(x) for x in line.strip().split(",")])
 
-                            data = [[float(x) for x in line.rstrip('\n').split(',')] for line in file]
+                            data = [[x for x in line.rstrip('\n').split(',')] for line in file]
+                            data = [float(x) for x in data[0][1:-1]]
 
                     except FileNotFoundError:
                         print("MISSING: " + file_name)
                         whole_agent_set = False
+                        continue
 
-                    data = sorted([np.average(x) for x in data])
-                    lowers[c][a] = data[PERC_LOWER - 1]
-                    uppers[c][a] = data[PERC_UPPER - 1]
-                    results[c][a] = np.average(data)
+                    data = sorted(data)
+                    lowers[c][s] = data[PERC_LOWER - 1]
+                    uppers[c][s] = data[PERC_UPPER - 1]
+                    results[c][s] = np.average(data)
 
             if data is None or not whole_agent_set:
                 continue
 
-            print("Average Error: {} states | {:.2f} evidence rate | {:.2f} noise".format(states, er, noise))
+            print("Average Error: {} agents | {:.2f} evidence rate | {:.2f} noise".format(agents, er, noise))
             for c, cl in enumerate(closure):
                 print("{}: ".format(closure_strings[c]), end=" ")
-                for a, agents in enumerate(agents_set):
-                    print("[{}a]: {:.3f}".format(agents, results[c][a]), end=" ")
+                for s, states in enumerate(states_set):
+                    print("[{}s]: {:.3f}".format(states, results[c][s]), end=" ")
                 print("")
 
             # flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
             # sns.set_palette(sns.color_palette(flatui))
             sns.set_palette("rocket", len(closure))
             for c, cl in enumerate(closure):
-                ax = sns.lineplot(agents_set, results[c], linewidth = 2, color=sns.color_palette()[c], label=closure_strings[c])
-                plt.fill_between(agents_set, lowers[c], uppers[c], facecolor=sns.color_palette()[c], edgecolor="none", alpha=0.3, antialiased=True)
-            plt.axhline(expected_error(noise, states), color="red", linestyle="dotted", linewidth = 2)
-            plt.xlabel("Agents")
-            plt.ylabel("Average Error")
-            plt.ylim(-0.01, 0.425)
+                ax = sns.lineplot(states_set, results[c], linewidth = 2, color=sns.color_palette()[c], label=closure_strings[c])
+                plt.fill_between(states_set, lowers[c], uppers[c], facecolor=sns.color_palette()[c], edgecolor="none", alpha=0.3, antialiased=True)
+            # plt.axhline(expected_error(noise, states), color="red", linestyle="dotted", linewidth = 2)
+            plt.xlabel(r"Options $n$")
+            plt.ylabel("Average runtime (seconds)")
+            # plt.ylim(-0.1, 11) # 10 states
+            plt.ylim(-0.1, 410) # 20 states
             # if noise == 0:
             #     plt.ylim(-0.05, 0.05)
             # elif noise == 0.5:
@@ -111,10 +113,5 @@ for s, states in enumerate(states_set):
             # time.sleep(10)
 
             plt.tight_layout()
-            # Complete graph
-            if connectivity_value == 1.0:
-                plt.savefig("../../results/graphs/pddm-network/error_comps_{}_states_{:.2f}_er_{:.2f}_noise.pdf".format(states, er, noise))
-            # Evidence-only graph
-            elif connectivity_value == 0.0:
-                plt.savefig("../../results/graphs/pddm-network/error_comps_ev_only_{}_states_{:.2f}_er_{:.2f}_noise.pdf".format(states, er, noise))
+            plt.savefig("../../results/graphs/pddm-network/runtime_{}_agents_{:.2f}_er_{:.2f}_noise.pdf".format(agents, er, noise))
             plt.clf()

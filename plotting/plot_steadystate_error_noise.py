@@ -19,7 +19,7 @@ evidence_strings = ["{:.2f}".format(x) for x in evidence_rates]
 noise_values = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
 connectivity_value = 1.0
 
-closure = True
+closure = False
 if closure is False:
     closure = "_no_cl"
 else:
