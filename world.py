@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 100
+tests = 50
 iteration_limit = 10_000
 steady_state_threshold = 100
 trajectory_populations = [10, 50, 100]
@@ -34,11 +34,11 @@ clique_graphs = [
 graph_type = "ER"
 
 fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Percentage of edges that are active during each iteration for fusion
-fusion_rate = 1
+fusion_rate = 50
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
-evidence_rate = 0.1
+evidence_rate = 0.01
 noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 0.0
+noise_param = 0
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
@@ -112,16 +112,22 @@ def main_loop(
     # and they both adopt the resulting combination.
     if mode == "symmetric":
 
-        try:
-            agent1, agent2 = random_instance.choice(list(network.edges))
-        except IndexError:
-            return True
+        network_copy = network.copy()
 
-        new_preference = operators.combine(agent1.preferences, agent2.preferences, form_closure)
+        for i in range(int(network.number_of_nodes() * (fusion_rate/100))):
+            try:
+                agent1, agent2 = random_instance.choice(list(network_copy.edges))
+            except IndexError:
+                return True
 
-        # Symmetric, so both agents adopt the combination preference.
-        agent1.update_preferences(new_preference)
-        agent2.update_preferences(new_preference)
+            new_preference = operators.combine(agent1.preferences, agent2.preferences, form_closure)
+
+            # Symmetric, so both agents adopt the combination preference.
+            agent1.update_preferences(new_preference)
+            agent2.update_preferences(new_preference)
+
+            network_copy.remove_node(agent1)
+            network_copy.remove_node(agent2)
 
     # Asymmetric
     # if mode == "asymmetric":
@@ -165,6 +171,8 @@ def main():
     # Output variables
     file_name_params = []
 
+    if fusion_rate is not None:
+        print("Fusion rate:", fusion_rate)
     print("Connectivity:", arguments.connectivity)
     print("Evidence rate:", evidence_rate)
     print("Noise value:", noise_param)
@@ -194,7 +202,7 @@ def main():
         opposite_prefs.add((true_order[i + 1],true_order[i]))
     true_prefs = operators.transitive_closure(true_prefs)
     opposite_prefs = operators.transitive_closure(opposite_prefs)
-    print(sorted(true_prefs, reverse=True))
+    # print(sorted(true_prefs, reverse=True))
 
     # Set up the collecting of results
     error_results = np.array([
@@ -307,6 +315,8 @@ def main():
     file_name_params.append("{:.2f}er".format(evidence_rate))
     if noise_param is not None:
         file_name_params.append("{}nv".format(noise_param))
+    if fusion_rate is not None:
+        file_name_params.append("{}fr".format(fusion_rate))
     if form_closure is False:
         file_name_params.append("no_cl")
     # Then write the results given the parameters.
@@ -365,7 +375,7 @@ def main():
 if __name__ == "__main__":
 
     # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
-    test_set = "standard"
+    test_set = "evidence"
 
     if test_set == "standard":
 
