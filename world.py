@@ -20,8 +20,6 @@ form_closure = False
 evidence_only = False
 
 
-directory = "../results/test_results/pddm-network/"
-
 # Set the graph type
 # Erdos-Reyni: random | Watts-Strogatz: small-world.
 random_graphs = ["ER", "WS"]
@@ -44,9 +42,13 @@ connectivity_value = 1.0
 # Store the generated comparison error values so that we only need to generate them once.
 comparison_errors = []
 
+# Set the type of agent: qualitative or probabilistic
+# (Pairwise preferences) Agent | Probabilistic |
+agent_type = Probabilistic
+
 # Set the initialisation function for agent preferences - option to add additional
 # initialisation functions later.
-init_preferences = preferences.ignorant_pref_generator
+init_preferences = agent_type.ignorant_preferences
 
 def initialisation(
     num_of_agents, states, network, connectivity, random_instance
@@ -114,7 +116,12 @@ def main_loop(
 
         network_copy = network.copy()
 
-        for i in range(int(network.number_of_nodes() * (fusion_rate/100))):
+        if fusion_rate is not None:
+            num_of_edges = int(network.number_of_nodes() * (fusion_rate/100))
+        else:
+            num_of_edges = 1
+
+        for i in range(num_of_edges):
             try:
                 agent1, agent2 = random_instance.choice(list(network_copy.edges))
             except IndexError:
@@ -169,6 +176,10 @@ def main():
     random_instance.seed(128) if arguments.random == None else random_instance.seed()
 
     # Output variables
+    if agent_type.__name__.lower() != "agent":
+        directory = "../results/test_results/pddm-network/{}/".format(agent_type.__name__.lower())
+    else:
+        directory = "../results/test_results/pddm-network/"
     file_name_params = []
 
     if fusion_rate is not None:
