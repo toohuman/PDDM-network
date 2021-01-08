@@ -245,6 +245,7 @@ class Probabilistic(Agent):
 
             return evidence
 
+        # To-do: Finish noisy evidence
         difference = abs(pos_i - pos_j) - 1
         comp_error = comparison_errors[difference]
 
