@@ -32,7 +32,7 @@ clique_graphs = [
 graph_type = "ER"
 
 fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Percentage of edges that are active during each iteration for fusion
-fusion_rate = 50
+fusion_rate = None
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.01
 noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
@@ -48,7 +48,7 @@ agent_type = Probabilistic
 
 # Set the initialisation function for agent preferences - option to add additional
 # initialisation functions later.
-init_preferences = agent_type.ignorant_preferences
+init_preferences = preferences.ignorant_preferences
 
 def initialisation(
     num_of_agents, states, network, connectivity, random_instance
@@ -188,6 +188,10 @@ def main():
     print("Evidence rate:", evidence_rate)
     print("Noise value:", noise_param)
     print("Closure:", form_closure)
+
+    # For the probabilistic agent:
+    # Set the quality values at uniform intervals i/(n+1) for i = 1, ..., n states.
+    quality_values = [i/(arguments.states + 1) for i in range(arguments.states)]
 
     comparison_errors[:] = []
     if noise_param is not None:

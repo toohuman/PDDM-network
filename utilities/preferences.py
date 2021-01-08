@@ -1,10 +1,12 @@
 import math
 import random
 
-def ignorant_pref_generator(states):
+
+def ignorant_preferences(states):
     """ Returns an empty set of preferences to denote complete uncertainty. """
 
     return set()
+
 
 def comparison_error(x: float, param: float):
     """
