@@ -1,19 +1,19 @@
-def combine(prefs1, prefs2, form_closure):
-    """
-    A renormalised sum of the two preference sets.
-    """
+# def combine(prefs1, prefs2, form_closure):
+#     """
+#     A renormalised sum of the two preference sets.
+#     """
 
-    # Combine the preference sets
-    preferences = prefs1 | prefs2
+#     # Combine the preference sets
+#     preferences = prefs1 | prefs2
 
-    # Now remove inconsistencies
-    consistent_prefs = [(x,y) for x,y in preferences if (y,x) not in preferences]
-    preferences = set(consistent_prefs)
+#     # Now remove inconsistencies
+#     consistent_prefs = [(x,y) for x,y in preferences if (y,x) not in preferences]
+#     preferences = set(consistent_prefs)
 
-    if form_closure:
-        preferences = transitive_closure(preferences)
+#     if form_closure:
+#         preferences = transitive_closure(preferences)
 
-    return preferences
+#     return preferences
 
 
 def transitive_closure(closure):

@@ -39,6 +39,8 @@ noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5
 noise_param = 0
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
+# Store the quality values as we only need to generate them once
+quality_values = []
 # Store the generated comparison error values so that we only need to generate them once.
 comparison_errors = []
 
@@ -51,13 +53,13 @@ agent_type = Probabilistic
 init_preferences = preferences.ignorant_preferences
 
 def initialisation(
-    num_of_agents, states, network, connectivity, random_instance
+    num_of_agents, states, network, connectivity, random_instance, rng
 ):
     """
     This initialisation function runs before any other part of the code. Starting with
     the creation of agents and the initialisation of relevant variables.
     """
-    agents = [Agent(init_preferences(states), form_closure) for x in range(num_of_agents)]
+    agents = [agent_type(init_preferences(states), states, form_closure, random_instance, rng) for x in range(num_of_agents)]
 
     if graph_type == "ER":
         edges = nx.gnp_random_graph(num_of_agents, connectivity, random_instance).edges
@@ -68,7 +70,7 @@ def initialisation(
     return
 
 def main_loop(
-    states: int, network, true_prefs: [], mode: str, random_instance
+    states: int, network, true_order: [], true_prefs: [], mode: str, random_instance
 ):
     """
     The main loop performs various actions in sequence until certain conditions are
@@ -84,21 +86,22 @@ def main_loop(
         if random_instance.random() <= evidence_rate:
 
             # Generate a random piece of evidence, selecting from the set of unknown states.
-            # evidence = preferences.random_evidence(
-            #     states,
-            #     true_order,
-            #     noise_param,
-            #     comparison_errors,
-            #     random_instance
-            # )
-            evidence = agent.find_evidence(
-                states,
-                true_prefs,
-                noise_param,
-                comparison_errors,
-                random_instance
-            )
-            agent.evidential_updating(operators.combine(agent.preferences, evidence, form_closure))
+            if agent_type.__name__.lower() == "probabilistic":
+                evidence = agent.random_evidence(
+                    states,
+                    true_order,
+                    noise_param,
+                    quality_values,
+                    comparison_errors
+                )
+            else:
+                evidence = agent.find_evidence(
+                    states,
+                    true_prefs,
+                    noise_param,
+                    comparison_errors
+                )
+            agent.evidential_updating(agent_type.combine(agent.preferences, evidence))
 
         reached_convergence &= agent.steady_state(steady_state_threshold)
 
@@ -174,6 +177,7 @@ def main():
     # results, or create using a random seed for further testing.
     random_instance = random.Random()
     random_instance.seed(128) if arguments.random == None else random_instance.seed()
+    rng = np.random.default_rng(128) if arguments.random == None else np.random.default_rng
 
     # Output variables
     if agent_type.__name__.lower() != "agent":
@@ -191,7 +195,7 @@ def main():
 
     # For the probabilistic agent:
     # Set the quality values at uniform intervals i/(n+1) for i = 1, ..., n states.
-    quality_values = [i/(arguments.states + 1) for i in range(arguments.states)]
+    quality_values[:] = [i/(arguments.states + 1) for i in range(arguments.states)]
 
     comparison_errors[:] = []
     if noise_param is not None:
@@ -255,7 +259,8 @@ def main():
             arguments.states,
             network,
             arguments.connectivity,
-            random_instance
+            random_instance,
+            rng
         )
 
         # Pre-loop results based on agent initialisation.
@@ -269,7 +274,7 @@ def main():
             print("Test #{} - Iteration #{}    ".format(test, iteration), end="\r")
             max_iteration = iteration if iteration > max_iteration else max_iteration
             # While not converged, continue to run the main loop.
-            if main_loop(arguments.states, network, true_prefs, mode, random_instance):
+            if main_loop(arguments.states, network, true_order, true_prefs, mode, random_instance):
                 for a, agent in enumerate(network.nodes):
                     error = results.error(agent.preferences, true_prefs)
                     error_results[iteration][test] += error

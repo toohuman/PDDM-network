@@ -10,13 +10,15 @@ class Agent:
     since_change    = int
     form_closure    = bool
 
-    def __init__(self, preferences, form_closure):
+    def __init__(self, preferences, states, form_closure, random_instance, rng):
 
         self.preferences = preferences
         self.evidence = 0
         self.interactions = 0
         self.since_change = 0
         self.form_closure = form_closure
+        self.random_instance = random_instance
+        self.rng = rng
 
 
     def steady_state(self, threshold):
@@ -26,7 +28,7 @@ class Agent:
 
 
     @staticmethod
-    def combine(prefs1, prefs2, form_closure):
+    def combine(prefs1, prefs2):
         """
         A renormalised sum of the two preference sets.
         """
@@ -38,7 +40,7 @@ class Agent:
         consistent_prefs = [(x,y) for x,y in preferences if (y,x) not in preferences]
         preferences = set(consistent_prefs)
 
-        if form_closure:
+        if self.form_closure:
             preferences = transitive_closure(preferences)
 
         return preferences
@@ -117,12 +119,12 @@ class Agent:
         return evidence
 
 
-    def random_evidence(self, states, true_order, noise_value, comparison_errors, random_instance):
+    def random_evidence(self, states, true_order, noise_value, comparison_errors):
         """ Generate a random piece of evidence regardless of current belief. """
 
         evidence = set()
         shuffled_states = [x for x in range(states)]
-        random_instance.shuffle(shuffled_states)
+        self.random_instance.shuffle(shuffled_states)
         index_i = shuffled_states.pop()
         index_j = shuffled_states.pop()
 
@@ -143,7 +145,7 @@ class Agent:
         difference = abs(pos_i - pos_j) - 1
         comp_error = comparison_errors[difference]
 
-        if random_instance.random() > comp_error:
+        if self.random_instance.random() > comp_error:
             evidence.add((best_index, worst_index))
         else:
             evidence.add((worst_index, best_index))
@@ -159,8 +161,8 @@ class Probabilistic(Agent):
     ordering should be obtainable from their belief.
     """
 
-    def __init__(self, belief):
-        super().__init__(belief)
+    def __init__(self, preferences, states, form_closure, random_instance, rng):
+        super().__init__(preferences, states, form_closure, random_instance, rng)
         # Alongside initialising an uncertain preference set, a probabilistic agent
         # also needs an uncertain probability distribution over the set of states.
         self.belief = np.full(states, 1/states)
@@ -191,39 +193,55 @@ class Probabilistic(Agent):
             return None
 
 
-    def evidential_updating(self, true_state, noise_value, random_instance):
+    def evidential_updating(self, preferences):
         """
-        Update the agent's belief based on the evidence they received.
+        Update the agent's preferences based on the evidence they received.
         Increment the evidence counter.
         """
 
-        evidence = self.random_evidence(
-            true_state,
-            noise_value,
-            random_instance
-        )
+        # Form the transitive closure of the combined preference
+        # prior to updating.
+        # if self.form_closure:
+        #     operators.transitive_closure(preferences)
 
-        new_belief = self.belief
-        if evidence is not None:
-            new_belief[evidence[0]] = evidence[1]
-
-        # Track the number of iterations that the agent's belief has
-        # remained unchanged.
-        if np.array_equal(self.belief, new_belief):
+        # Track the number of iterations.
+        if preferences == self.preferences:
             self.since_change += 1
         else:
             self.since_change = 0
 
-        self.belief = new_belief
+        self.preferences = preferences
         self.evidence += 1
 
 
-    def random_evidence(self, states, true_order, noise_value, comparison_errors, random_instance):
+    def update_preferences(self, preferences):
+        """
+        Update the agent's preferences based on having combined their preferences with
+        those of another agent.
+        Increment the interaction counter.
+        """
+
+        # Form the transitive closure of the combined preference
+        # prior to updating.
+        # if self.form_closure:
+        #     operators.transitive_closure(preferences)
+
+        # Track the number of iterations.
+        if preferences == self.preferences:
+            self.since_change += 1
+        else:
+            self.since_change = 0
+
+        self.preferences = preferences
+        self.interactions += 1
+
+
+    def random_evidence(self, states, true_order, noise_value, quality_values, comparison_errors):
         """ Generate a random piece of evidence regardless of current belief. """
 
         evidence = np.full(states, 1/states)
         shuffled_states = [x for x in range(states)]
-        random_instance.shuffle(shuffled_states)
+        self.random_instance.shuffle(shuffled_states)
         index_i = shuffled_states.pop()
         index_j = shuffled_states.pop()
 
@@ -238,20 +256,33 @@ class Probabilistic(Agent):
             worst_index = index_i
 
         if noise_value is None:
-            evidence[best_index] = (1 - qualities[best_index])/states
+            evidence[best_index] = (1 - quality_values[best_index])/states
             for i, ev in evidence:
                 if i != best_index:
-                    evidence[i] = ((states - 1) *(qualities[best_index]) + 1)/states
+                    evidence[i] = ((states - 1) *(quality_values[best_index]) + 1)/states
 
             return evidence
 
-        # To-do: Finish noisy evidence
-        difference = abs(pos_i - pos_j) - 1
-        comp_error = comparison_errors[difference]
+        # difference = abs(pos_i - pos_j) - 1
+        # comp_error = comparison_errors[difference]
 
-        if random_instance.random() > comp_error:
-            evidence.add((best_index, worst_index))
-        else:
-            evidence.add((worst_index, best_index))
+        # if self.random_instance.random() > comp_error:
+        #     evidence.add((best_index, worst_index))
+        # else:
+        #     evidence.add((worst_index, best_index))
+
+        # TODO: Finish noisy evidence
+
+        # Noise model 1: Normal distribution around q_i
+
+        print(evidence)
+        print(quality_values)
+        print(best_index)
+
+        print("Hello")
+        evidence[best_index] = self.rng.normal(quality_values[best_index], noise_value)
+
+        # Noise model 2: Binary model of learning the wrong quality value if two states
+        # are erroneously compared
 
         return evidence
