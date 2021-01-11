@@ -94,6 +94,7 @@ def main_loop(
                     quality_values,
                     comparison_errors
                 )
+                agent.evidential_updating(agent_type.combine(agent.belief, evidence))
             else:
                 evidence = agent.find_evidence(
                     states,
@@ -101,7 +102,7 @@ def main_loop(
                     noise_param,
                     comparison_errors
                 )
-            agent.evidential_updating(agent_type.combine(agent.preferences, evidence))
+                agent.evidential_updating(agent_type.combine(agent.preferences, evidence))
 
         reached_convergence &= agent.steady_state(steady_state_threshold)
 
@@ -130,7 +131,10 @@ def main_loop(
             except IndexError:
                 return True
 
-            new_preference = operators.combine(agent1.preferences, agent2.preferences, form_closure)
+            if agent_type.__name__.lower() != "agent":
+                new_preference = agent_type.combine(agent1.belief, agent2.belief)
+            else:
+                new_preference = agent_type.combine(agent1.preferences, agent2.preferences)
 
             # Symmetric, so both agents adopt the combination preference.
             agent1.update_preferences(new_preference)
@@ -195,7 +199,7 @@ def main():
 
     # For the probabilistic agent:
     # Set the quality values at uniform intervals i/(n+1) for i = 1, ..., n states.
-    quality_values[:] = [i/(arguments.states + 1) for i in range(arguments.states)]
+    quality_values[:] = [round(i/(arguments.states + 1), 5) for i in range(arguments.states)]
 
     comparison_errors[:] = []
     if noise_param is not None:

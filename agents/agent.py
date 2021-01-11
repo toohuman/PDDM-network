@@ -165,11 +165,11 @@ class Probabilistic(Agent):
         super().__init__(preferences, states, form_closure, random_instance, rng)
         # Alongside initialising an uncertain preference set, a probabilistic agent
         # also needs an uncertain probability distribution over the set of states.
-        self.belief = np.full(states, 1/states)
+        self.belief = [1/states for x in range(states)]
 
 
     @staticmethod
-    def consensus(belief1, belief2):
+    def combine(belief1, belief2):
         """
         Probabilistic updating using the product operator. This combines two (possibly conflicting)
         probability distributions into a single probability distribution.
@@ -179,11 +179,11 @@ class Probabilistic(Agent):
         # When compared with a possibilistic approach, this operator can be adjusted to produce probabilistic
         # rankings of states.
         product_sum = np.dot(belief1, belief2)
-        new_belief = np.array([
+        new_belief = [
             (belief1[i] * belief2[i]) /
             product_sum
             for i in range(len(belief1))
-        ])
+        ]
 
         invalid_belief = np.isnan(np.sum(new_belief))
 
@@ -193,7 +193,7 @@ class Probabilistic(Agent):
             return None
 
 
-    def evidential_updating(self, preferences):
+    def evidential_updating(self, belief):
         """
         Update the agent's preferences based on the evidence they received.
         Increment the evidence counter.
@@ -205,16 +205,17 @@ class Probabilistic(Agent):
         #     operators.transitive_closure(preferences)
 
         # Track the number of iterations.
-        if preferences == self.preferences:
+        if belief == self.belief:
             self.since_change += 1
         else:
             self.since_change = 0
 
-        self.preferences = preferences
+        self.belief = belief
+        self.identify_preferences()
         self.evidence += 1
 
 
-    def update_preferences(self, preferences):
+    def update_preferences(self, belief):
         """
         Update the agent's preferences based on having combined their preferences with
         those of another agent.
@@ -227,19 +228,28 @@ class Probabilistic(Agent):
         #     operators.transitive_closure(preferences)
 
         # Track the number of iterations.
-        if preferences == self.preferences:
+        if belief == self.belief:
             self.since_change += 1
         else:
             self.since_change = 0
 
-        self.preferences = preferences
+        self.belief = belief
+        self.identify_preferences()
         self.interactions += 1
+
+
+    def identify_preferences(self):
+        """ Identify the preference ordering from the agent's current belief. """
+
+        preference_order = sorted(enumerate(self.belief))
+        print(preference_order)
+
 
 
     def random_evidence(self, states, true_order, noise_value, quality_values, comparison_errors):
         """ Generate a random piece of evidence regardless of current belief. """
 
-        evidence = np.full(states, 1/states)
+        evidence = [1/states for x in range(states)]
         shuffled_states = [x for x in range(states)]
         self.random_instance.shuffle(shuffled_states)
         index_i = shuffled_states.pop()
@@ -256,10 +266,10 @@ class Probabilistic(Agent):
             worst_index = index_i
 
         if noise_value is None:
-            evidence[best_index] = (1 - quality_values[best_index])/states
-            for i, ev in evidence:
+            evidence[best_index] = (((states - 1) * quality_values[best_index]) + 1)/states
+            for i, ev in enumerate(evidence):
                 if i != best_index:
-                    evidence[i] = ((states - 1) *(quality_values[best_index]) + 1)/states
+                    evidence[i] = (1 - quality_values[best_index])/states
 
             return evidence
 
@@ -275,12 +285,18 @@ class Probabilistic(Agent):
 
         # Noise model 1: Normal distribution around q_i
 
-        print(evidence)
-        print(quality_values)
-        print(best_index)
+        # print("----")
+        # print(evidence)
+        # print(quality_values)
+        # print(best_index)
 
-        print("Hello")
-        evidence[best_index] = self.rng.normal(quality_values[best_index], noise_value)
+        epsilon = self.rng.normal(0, noise_value)
+
+        evidence[best_index] = (((states - 1) * max(0, min(quality_values[best_index] + epsilon, 1))) + 1)/states
+        for i, ev in enumerate(evidence):
+            if i != best_index:
+                evidence[i] = (max(0, min(1 - quality_values[best_index] - epsilon, 1)))/states
+        # print(evidence)
 
         # Noise model 2: Binary model of learning the wrong quality value if two states
         # are erroneously compared
