@@ -36,7 +36,7 @@ fusion_rate = None
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.01
 noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 0
+noise_param = 0.3
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the quality values as we only need to generate them once

@@ -185,11 +185,20 @@ class Probabilistic(Agent):
             for i in range(len(belief1))
         ]
 
+        # Adding a dampening factor to the product rule
+        # Jonathan's preferred lambda value: 0.1
+        var_lambda = 0.1
+        new_belief = [
+            (var_lambda * 0.5) + ((1 - var_lambda) * belief)
+            for belief in new_belief
+        ]
+
         invalid_belief = np.isnan(np.sum(new_belief))
 
         if not invalid_belief:
             return new_belief
         else:
+            # Operator undefined for two inconsistent beliefs.
             return None
 
 
@@ -199,16 +208,17 @@ class Probabilistic(Agent):
         Increment the evidence counter.
         """
 
-        # Form the transitive closure of the combined preference
-        # prior to updating.
-        # if self.form_closure:
-        #     operators.transitive_closure(preferences)
+        if belief is None:
+            self.since_change += 1
+            return
 
         # Track the number of iterations.
         if belief == self.belief:
             self.since_change += 1
         else:
             self.since_change = 0
+
+        # print(belief)
 
         self.belief = belief
         self.identify_preferences()
@@ -222,16 +232,17 @@ class Probabilistic(Agent):
         Increment the interaction counter.
         """
 
-        # Form the transitive closure of the combined preference
-        # prior to updating.
-        # if self.form_closure:
-        #     operators.transitive_closure(preferences)
+        if belief is None:
+            self.since_change += 1
+            return
 
         # Track the number of iterations.
         if belief == self.belief:
             self.since_change += 1
         else:
             self.since_change = 0
+
+        # print(belief)
 
         self.belief = belief
         self.identify_preferences()
@@ -241,15 +252,24 @@ class Probabilistic(Agent):
     def identify_preferences(self):
         """ Identify the preference ordering from the agent's current belief. """
 
-        preference_order = sorted(enumerate(self.belief))
-        print(preference_order)
+        # Generate preference set from probability distribution:
+        # - compare all elements pairwise
+        # - if x > y, add (x, y), elif y > x, add (y, x), else, skip.
 
+        self.preferences = set()
+
+        for x, i in enumerate(self.belief):
+            for y, j in enumerate(self.belief):
+                if i > j:
+                    self.preferences.add((x,y))
+                elif j > i:
+                    self.preferences.add((y,x))
 
 
     def random_evidence(self, states, true_order, noise_value, quality_values, comparison_errors):
         """ Generate a random piece of evidence regardless of current belief. """
 
-        evidence = [1/states for x in range(states)]
+        evidence = [0.0 for x in range(states)]
         shuffled_states = [x for x in range(states)]
         self.random_instance.shuffle(shuffled_states)
         index_i = shuffled_states.pop()
@@ -273,22 +293,9 @@ class Probabilistic(Agent):
 
             return evidence
 
-        # difference = abs(pos_i - pos_j) - 1
-        # comp_error = comparison_errors[difference]
-
-        # if self.random_instance.random() > comp_error:
-        #     evidence.add((best_index, worst_index))
-        # else:
-        #     evidence.add((worst_index, best_index))
-
         # TODO: Finish noisy evidence
 
         # Noise model 1: Normal distribution around q_i
-
-        # print("----")
-        # print(evidence)
-        # print(quality_values)
-        # print(best_index)
 
         epsilon = self.rng.normal(0, noise_value)
 
@@ -296,7 +303,6 @@ class Probabilistic(Agent):
         for i, ev in enumerate(evidence):
             if i != best_index:
                 evidence[i] = (max(0, min(1 - quality_values[best_index] - epsilon, 1)))/states
-        # print(evidence)
 
         # Noise model 2: Binary model of learning the wrong quality value if two states
         # are erroneously compared
