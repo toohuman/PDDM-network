@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 50
+tests = 2
 iteration_limit = 10_000
 steady_state_threshold = 100
 trajectory_populations = [10, 50, 100]
@@ -236,6 +236,14 @@ def main():
         [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
     ])
 
+    if agent_type.__name__.lower() == "probabilistic":
+        probability_results = np.array([
+            [ [ 0.0 for x in range(arguments.states) ] for y in range(tests) ] for z in range(iteration_limit + 1)
+        ])
+        steady_state_probability_results = np.array([
+            [ [ 0.0 for x in range(arguments.states) ] for y in range(arguments.agents) ] for z in range(tests)
+        ])
+
     uncertainty_results = np.array([
         [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
     ])
@@ -273,6 +281,9 @@ def main():
             error_results[0][test] += results.error(agent.preferences, true_prefs)
             uncertainty_results[0][test] += results.uncertainty(agent.preferences, true_prefs)
 
+            if agent_type.__name__.lower() == "probabilistic":
+                np.add(probability_results[0][test], agent.belief, out=probability_results[0][test])
+
         # Main loop of the experiments. Starts at 1 because we have recorded the agents'
         # initial state above, at the "0th" index.
         for iteration in range(1, iteration_limit + 1):
@@ -283,10 +294,14 @@ def main():
                 for a, agent in enumerate(network.nodes):
                     error = results.error(agent.preferences, true_prefs)
                     error_results[iteration][test] += error
+                    if agent_type.__name__.lower() == "probabilistic":
+                        np.add(probability_results[0][test], agent.belief, out=probability_results[0][test])
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     if iteration == iteration_limit:
                         steady_state_error_results[test][a] = error
+                        if agent_type.__name__.lower() == "probabilistic":
+                            steady_state_probability_results[test][a] = agent.belief
                         steady_state_uncertainty_results[test][a] = uncertainty
 
             # If the simulation has converged, end the test.
@@ -298,6 +313,8 @@ def main():
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     steady_state_error_results[test][a] = error
+                    if agent_type.__name__.lower() == "probabilistic":
+                        steady_state_probability_results[test][a] = agent.belief
                     steady_state_uncertainty_results[test][a] = uncertainty
                 for iter in range(iteration + 1, iteration_limit + 1):
                     error_results[iter][test] = np.copy(error_results[iteration][test])
@@ -318,6 +335,8 @@ def main():
 
     # Post-loop results processing (normalisation).
     error_results /= arguments.agents
+    if agent_type.__name__.lower() == "probabilistic":
+        probability_results /= arguments.agents
     uncertainty_results /= arguments.agents
 
     # Recording of results. First, add parameters in sequence.
@@ -370,6 +389,26 @@ def main():
         steady_state_error_results,
         tests
     )
+
+    if agent_type.__name__.lower() == "probabilistic":
+        if arguments.agents in trajectory_populations:
+            results.write_to_file(
+                directory,
+                "probabilities",
+                file_name_params,
+                probability_results,
+                max_iteration,
+                array_data=True
+            )
+
+        results.write_to_file(
+            directory,
+            "steady_state_probabilities",
+            file_name_params,
+            steady_state_probability_results,
+            tests,
+            array_data=True
+        )
 
     if arguments.agents in trajectory_populations:
         results.write_to_file(
