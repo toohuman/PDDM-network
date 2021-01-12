@@ -35,8 +35,8 @@ fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Percentage of edges that are activ
 fusion_rate = None
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.01
-noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 0.3
+noise_params = [0.0, 0.1, 0.2, 0.3, 0.4] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
+noise_param = 0.1
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the quality values as we only need to generate them once
@@ -95,6 +95,8 @@ def main_loop(
                     comparison_errors
                 )
                 agent.evidential_updating(agent_type.combine(agent.belief, evidence))
+            elif agent_type.__name__.lower() == "bandwidth":
+                pass
             else:
                 evidence = agent.find_evidence(
                     states,
@@ -131,7 +133,7 @@ def main_loop(
             except IndexError:
                 return True
 
-            if agent_type.__name__.lower() != "agent":
+            if agent_type.__name__.lower() == "probabilistic":
                 new_preference = agent_type.combine(agent1.belief, agent2.belief)
             else:
                 new_preference = agent_type.combine(agent1.preferences, agent2.preferences)
@@ -184,10 +186,9 @@ def main():
     rng = np.random.default_rng(128) if arguments.random == None else np.random.default_rng
 
     # Output variables
+    directory = "../results/test_results/pddm-network/"
     if agent_type.__name__.lower() != "agent":
-        directory = "../results/test_results/pddm-network/{}/".format(agent_type.__name__.lower())
-    else:
-        directory = "../results/test_results/pddm-network/"
+        directory += "{}/".format(agent_type.__name__.lower())
     file_name_params = []
 
     if fusion_rate is not None:
@@ -399,7 +400,7 @@ def main():
 if __name__ == "__main__":
 
     # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
-    test_set = "evidence"
+    test_set = "en"
 
     if test_set == "standard":
 
