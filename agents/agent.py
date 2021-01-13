@@ -8,15 +8,14 @@ class Agent:
     evidence        = int
     interactions    = int
     since_change    = int
-    form_closure    = bool
+    form_closure    = False
 
-    def __init__(self, preferences, states, form_closure, random_instance, rng):
+    def __init__(self, preferences, states, random_instance, rng):
 
         self.preferences = preferences
         self.evidence = 0
         self.interactions = 0
         self.since_change = 0
-        self.form_closure = form_closure
         self.random_instance = random_instance
         self.rng = rng
 
@@ -40,8 +39,8 @@ class Agent:
         consistent_prefs = [(x,y) for x,y in preferences if (y,x) not in preferences]
         preferences = set(consistent_prefs)
 
-        if self.form_closure:
-            preferences = transitive_closure(preferences)
+        if Agent.form_closure:
+            preferences = operators.transitive_closure(preferences)
 
         return preferences
 
@@ -89,7 +88,7 @@ class Agent:
         self.interactions += 1
 
 
-    def find_evidence(self, states, true_prefs, noise_value, comparison_errors, random_instance):
+    def find_evidence(self, states, true_prefs, noise_value, comparison_errors):
         """ Generate a random piece of evidence from the set of unknown preference relations. """
 
         evidence = set()
@@ -99,7 +98,7 @@ class Agent:
         # print(possible_evidence)
 
         try:
-            choice = random_instance.sample(possible_evidence, 1)[0]
+            choice = self.random_instance.sample(possible_evidence, 1)[0]
             # print(choice)
         except ValueError:
             return evidence
@@ -111,7 +110,7 @@ class Agent:
         difference = abs(choice[0] - choice[1]) - 1
         comp_error = comparison_errors[difference]
 
-        if random_instance.random() > comp_error:
+        if self.random_instance.random() > comp_error:
             evidence.add(choice)
         else:
             evidence.add((choice[1], choice[0]))
@@ -153,6 +152,54 @@ class Agent:
         return evidence
 
 
+class Bandwidth(Agent):
+
+    """
+    A bandwidth-limited agent that, during pairwise consensus formation, cannot transmit
+    the entire length of its preference ordering but instead sends a subset of preferences.
+    """
+
+    def __init__(self, preferences, states, random_instance, rng):
+        super().__init__(preferences, states, random_instance, rng)
+
+
+    @staticmethod
+    def combine(prefs1, prefs2, random_instance, bandwidth_limit = None):
+        """
+        A renormalised sum of the two preference sets.
+        """
+
+        # Combine the preference sets
+        if bandwidth_limit is None:
+            preferences = prefs1 | prefs2
+
+            # Now remove inconsistencies
+            consistent_prefs = [(x,y) for x,y in preferences if (y,x) not in preferences]
+            preferences = set(consistent_prefs)
+
+            if Agent.form_closure:
+                preferences = operators.transitive_closure(preferences)
+
+            return preferences
+        else:
+            set1 = set(random_instance.sample(list(prefs1), bandwidth_limit)) if bandwidth_limit <= len(prefs1) else prefs1
+            set2 = set(random_instance.sample(list(prefs2), bandwidth_limit)) if bandwidth_limit <= len(prefs2) else prefs2
+            preferences1 = prefs1 | set2
+            preferences2 = set1 | prefs2
+
+            # Now remove inconsistencies
+            consistent_prefs1 = [(x,y) for x,y in preferences1 if (y,x) not in preferences1]
+            preferences1 = set(consistent_prefs1)
+            consistent_prefs2 = [(x,y) for x,y in preferences2 if (y,x) not in preferences2]
+            preferences2 = set(consistent_prefs2)
+
+            if Agent.form_closure:
+                preferences1 = operators.transitive_closure(preferences1)
+                preferences2 = operators.transitive_closure(preferences2)
+
+        return (preferences1, preferences2)
+
+
 class Probabilistic(Agent):
 
     """
@@ -161,8 +208,8 @@ class Probabilistic(Agent):
     ordering should be obtainable from their belief.
     """
 
-    def __init__(self, preferences, states, form_closure, random_instance, rng):
-        super().__init__(preferences, states, form_closure, random_instance, rng)
+    def __init__(self, preferences, states, random_instance, rng):
+        super().__init__(preferences, states, random_instance, rng)
         # Alongside initialising an uncertain preference set, a probabilistic agent
         # also needs an uncertain probability distribution over the set of states.
         self.belief = [1/states for x in range(states)]

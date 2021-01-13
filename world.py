@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 2
+tests = 50
 iteration_limit = 10_000
 steady_state_threshold = 100
 trajectory_populations = [10, 50, 100]
@@ -18,7 +18,6 @@ trajectory_populations = [10, 50, 100]
 mode = "symmetric" # ["symmetric" | "asymmetric"]
 form_closure = False
 evidence_only = False
-
 
 # Set the graph type
 # Erdos-Reyni: random | Watts-Strogatz: small-world.
@@ -35,7 +34,7 @@ fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Percentage of edges that are activ
 fusion_rate = None
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.01
-noise_params = [0.0, 0.1, 0.2, 0.3, 0.4] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
+noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
 noise_param = 0.1
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
@@ -45,8 +44,11 @@ quality_values = []
 comparison_errors = []
 
 # Set the type of agent: qualitative or probabilistic
-# (Pairwise preferences) Agent | Probabilistic |
-agent_type = Probabilistic
+# (Pairwise preferences) Agent | Bandwidth | Probabilistic |
+agent_type = Bandwidth
+
+if agent_type.__name__.lower() == "probabilistic":
+    noise_params = [0.0, 0.1, 0.2, 0.3, 0.4]
 
 # Set the initialisation function for agent preferences - option to add additional
 # initialisation functions later.
@@ -59,7 +61,8 @@ def initialisation(
     This initialisation function runs before any other part of the code. Starting with
     the creation of agents and the initialisation of relevant variables.
     """
-    agents = [agent_type(init_preferences(states), states, form_closure, random_instance, rng) for x in range(num_of_agents)]
+    Agent.form_closure = form_closure
+    agents = [agent_type(init_preferences(states), states, random_instance, rng) for x in range(num_of_agents)]
 
     if graph_type == "ER":
         edges = nx.gnp_random_graph(num_of_agents, connectivity, random_instance).edges
@@ -70,7 +73,7 @@ def initialisation(
     return
 
 def main_loop(
-    states: int, network, true_order: [], true_prefs: [], mode: str, random_instance
+    states: int, network, true_order: [], true_prefs: [], mode: str, bandwidth_limit: int, random_instance
 ):
     """
     The main loop performs various actions in sequence until certain conditions are
@@ -96,7 +99,13 @@ def main_loop(
                 )
                 agent.evidential_updating(agent_type.combine(agent.belief, evidence))
             elif agent_type.__name__.lower() == "bandwidth":
-                pass
+                evidence = agent.find_evidence(
+                    states,
+                    true_prefs,
+                    noise_param,
+                    comparison_errors
+                )
+                agent.evidential_updating(agent_type.combine(agent.preferences, evidence, random_instance))
             else:
                 evidence = agent.find_evidence(
                     states,
@@ -135,12 +144,18 @@ def main_loop(
 
             if agent_type.__name__.lower() == "probabilistic":
                 new_preference = agent_type.combine(agent1.belief, agent2.belief)
+            elif agent_type.__name__.lower() == "bandwidth":
+                new_preference = agent_type.combine(agent1.preferences, agent2.preferences, random_instance, bandwidth_limit)
             else:
                 new_preference = agent_type.combine(agent1.preferences, agent2.preferences)
 
-            # Symmetric, so both agents adopt the combination preference.
-            agent1.update_preferences(new_preference)
-            agent2.update_preferences(new_preference)
+            if type(new_preference) is tuple:
+                agent1.update_preferences(new_preference[0])
+                agent2.update_preferences(new_preference[1])
+            else:
+                # Symmetric, so both agents adopt the combination preference.
+                agent1.update_preferences(new_preference)
+                agent2.update_preferences(new_preference)
 
             network_copy.remove_node(agent1)
             network_copy.remove_node(agent2)
@@ -201,6 +216,11 @@ def main():
     # For the probabilistic agent:
     # Set the quality values at uniform intervals i/(n+1) for i = 1, ..., n states.
     quality_values[:] = [round(i/(arguments.states + 1), 5) for i in range(arguments.states)]
+
+    bandwidth_limit = None
+    if agent_type.__name__.lower() == "bandwidth":
+        bandwidth_limit = arguments.states
+        print("bandwidth_limit")
 
     comparison_errors[:] = []
     if noise_param is not None:
@@ -290,12 +310,12 @@ def main():
             print("Test #{} - Iteration #{}    ".format(test, iteration), end="\r")
             max_iteration = iteration if iteration > max_iteration else max_iteration
             # While not converged, continue to run the main loop.
-            if main_loop(arguments.states, network, true_order, true_prefs, mode, random_instance):
+            if main_loop(arguments.states, network, true_order, true_prefs, mode, bandwidth_limit, random_instance):
                 for a, agent in enumerate(network.nodes):
                     error = results.error(agent.preferences, true_prefs)
                     error_results[iteration][test] += error
                     if agent_type.__name__.lower() == "probabilistic":
-                        np.add(probability_results[0][test], agent.belief, out=probability_results[0][test])
+                        np.add(probability_results[iteration][test], agent.belief, out=probability_results[iteration][test])
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     if iteration == iteration_limit:
@@ -358,7 +378,7 @@ def main():
 
     file_name_params.append("{:.2f}er".format(evidence_rate))
     if noise_param is not None:
-        file_name_params.append("{}nv".format(noise_param))
+        file_name_params.append("{:.1f}nv".format(noise_param))
     if fusion_rate is not None:
         file_name_params.append("{}fr".format(fusion_rate))
     if form_closure is False:
@@ -439,7 +459,7 @@ def main():
 if __name__ == "__main__":
 
     # "standard" | "evidence" | "noise" | "en" | "ce" | "cen"
-    test_set = "en"
+    test_set = "noise"
 
     if test_set == "standard":
 
