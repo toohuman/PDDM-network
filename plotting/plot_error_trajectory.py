@@ -53,9 +53,6 @@ for s, states in enumerate(states_set):
 
                 try:
                     with open(result_directory + file_name, "r") as file:
-                        # iteration = 0
-                        # for line in file:
-                        #     average_error = np.average([float(x) for x in line.strip().split(",")])
 
                         data = [[float(x) for x in line.rstrip('\n').split(',')] for line in file]
 

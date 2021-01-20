@@ -30,7 +30,7 @@ clique_graphs = [
 ]
 graph_type = "ER"
 
-fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Percentage of edges that are active during each iteration for fusion
+fusion_rates = [1, 5, 10, 20, 30, 40, 50]   # Number of pairs of agents to be selected for belief fusion
 fusion_rate = None
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.01
@@ -45,7 +45,7 @@ comparison_errors = []
 
 # Set the type of agent: qualitative or probabilistic
 # (Pairwise preferences) Agent | Bandwidth | Probabilistic |
-agent_type = Bandwidth
+agent_type = Agent
 
 if agent_type.__name__.lower() == "probabilistic":
     noise_params = [0.0, 0.1, 0.2, 0.3, 0.4]
@@ -264,6 +264,13 @@ def main():
             [ [ 0.0 for x in range(arguments.states) ] for y in range(arguments.agents) ] for z in range(tests)
         ])
 
+        preference_results = np.array([
+            [ [ 0.0 for x in range(arguments.states - 1) ] for y in range(tests) ] for z in range(iteration_limit + 1)
+        ])
+        steady_state_preference_results = np.array([
+            [ [ 0 for x in range(arguments.states - 1) ] for y in range(arguments.agents) ] for z in range(tests)
+        ])
+
     uncertainty_results = np.array([
         [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
     ])
@@ -316,12 +323,18 @@ def main():
                     error_results[iteration][test] += error
                     if agent_type.__name__.lower() == "probabilistic":
                         np.add(probability_results[iteration][test], agent.belief, out=probability_results[iteration][test])
+                        for i in range(arguments.states - 1, 0, -1):
+                            if (i, i-1) in agent.preferences:
+                                preference_results[iteration][test][arguments.states - 1 - i] += 1
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     if iteration == iteration_limit:
                         steady_state_error_results[test][a] = error
                         if agent_type.__name__.lower() == "probabilistic":
                             steady_state_probability_results[test][a] = agent.belief
+                            for i in range(arguments.states - 1, 0, -1):
+                                if (i, i-1) in agent.preferences:
+                                    steady_state_preference_results[test][a][arguments.states - 1 - i] = 1
                         steady_state_uncertainty_results[test][a] = uncertainty
 
             # If the simulation has converged, end the test.
@@ -335,9 +348,14 @@ def main():
                     steady_state_error_results[test][a] = error
                     if agent_type.__name__.lower() == "probabilistic":
                         steady_state_probability_results[test][a] = agent.belief
+                        for i in range(arguments.states - 1, 0, -1):
+                            if (i, i-1) in agent.preferences:
+                                steady_state_preference_results[test][a][arguments.states - 1 - i] = 1
                     steady_state_uncertainty_results[test][a] = uncertainty
                 for iter in range(iteration + 1, iteration_limit + 1):
                     error_results[iter][test] = np.copy(error_results[iteration][test])
+                    if agent_type.__name__.lower() == "probabilistic":
+                        probability_results[iter][test] = np.copy(probability_results[iteration][test])
                     uncertainty_results[iter][test] = np.copy(uncertainty_results[iteration][test])
                 # Simulation has converged, so break main loop.
                 break
@@ -357,6 +375,7 @@ def main():
     error_results /= arguments.agents
     if agent_type.__name__.lower() == "probabilistic":
         probability_results /= arguments.agents
+        preference_results /= arguments.agents
     uncertainty_results /= arguments.agents
 
     # Recording of results. First, add parameters in sequence.
@@ -426,6 +445,25 @@ def main():
             "steady_state_probabilities",
             file_name_params,
             steady_state_probability_results,
+            tests,
+            array_data=True
+        )
+
+        if arguments.agents in trajectory_populations:
+            results.write_to_file(
+                directory,
+                "preferences",
+                file_name_params,
+                preference_results,
+                max_iteration,
+                array_data=True
+            )
+
+        results.write_to_file(
+            directory,
+            "steady_state_preferences",
+            file_name_params,
+            steady_state_preference_results,
             tests,
             array_data=True
         )
