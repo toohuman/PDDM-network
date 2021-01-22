@@ -33,13 +33,13 @@ for s, states in enumerate(states_set):
         for a, agents in enumerate(agents_set):
             for e, er in enumerate(evidence_rates):
 
-                results = np.array([[0.0 for x in range(states)] for y in iterations])
-                lowers = np.array([[0.0 for x in range(states)] for y in iterations])
-                uppers = np.array([[0.0 for x in range(states)] for y in iterations])
+                results = np.array([[0.0 for x in range(states - 1)] for y in iterations])
+                lowers = np.array([[0.0 for x in range(states - 1)] for y in iterations])
+                uppers = np.array([[0.0 for x in range(states - 1)] for y in iterations])
                 data = None
 
                 file_name_parts = [
-                    "probabilities",
+                    "preferences",
                     "{}a".format(agents),
                     "{}s".format(states),
                     "{:.2f}con".format(conn),
@@ -59,9 +59,9 @@ for s, states in enumerate(states_set):
                         data = np.array([[[float(x) for x in y.split(',')] for y in line.lstrip('[').rstrip(']\n').split('],[')] for line in file])
 
                     for t, test in enumerate(data):
-                        for i in range(states):
+                        for i in range(states - 1):
                             sorted_data = sorted(test[:,i])
-                            # print(t, i, sorted_data)
+                            print(t, i, sorted_data)
                             lowers[t][i] = sorted_data[PERC_LOWER - 1]
                             uppers[t][i] = sorted_data[PERC_UPPER - 1]
                             results[t][i] = np.average(sorted_data)
@@ -117,15 +117,15 @@ for s, states in enumerate(states_set):
 
 
                 # for _ in range(2):    # This was to fix a weird drawing bug in matplotlib
-                sns.set_palette("rocket", states)
-                for i in range(states):
-                    ax = sns.lineplot(x=iterations, y=results[:,i], linewidth = 2, color=sns.color_palette()[i], label=r'$p(s_{})$'.format(i))
+                sns.set_palette("rocket", states - 1)
+                for i, state in enumerate(range(states - 1, 0, -1)):
+                    ax = sns.lineplot(x=iterations, y=results[:,i], linewidth = 2, color=sns.color_palette()[i], label=r'$({}, {})$'.format(state, state - 1))
                     # plt.fill_between(iterations, lowers[:,i], uppers[:,i], facecolor=sns.color_palette()[i], edgecolor="none", alpha=0.3, antialiased=True)
 
                 # plt.axhline(expected_error(noise, states), color="red", linestyle="dotted", linewidth = 2)
                 plt.xlabel(r'Time $t$')
-                plt.ylabel("Average Error")
-                plt.ylim(-0.01, 0.525)
+                plt.ylabel("Proportion of population")
+                plt.ylim(-0.01, 1)
                 plt.xlim(0, 3000)
                 plt.title("Average error | {} states, {} er, {} noise".format(states, er, noise))
 
@@ -143,8 +143,8 @@ for s, states in enumerate(states_set):
                 plt.tight_layout()
                 # Complete graph
                 if conn == 1.0:
-                    plt.savefig("../../results/graphs/pddm-network/probabilistic/distribution_trajectory_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agents, states, er, noise, closure))
+                    plt.savefig("../../results/graphs/pddm-network/probabilistic/preference_trajectory_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agents, states, er, noise, closure))
                 # Evidence-only graph
                 elif conn == 0.0:
-                    plt.savefig("../../results/graphs/pddm-network/probabilistic/distribution_trajectory_ev_only_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agents, states, er, noise, closure))
+                    plt.savefig("../../results/graphs/pddm-network/probabilistic/preference_trajectory_ev_only_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agents, states, er, noise, closure))
                 plt.clf()

@@ -45,7 +45,7 @@ comparison_errors = []
 
 # Set the type of agent: qualitative or probabilistic
 # (Pairwise preferences) Agent | Bandwidth | Probabilistic |
-agent_type = Agent
+agent_type = Probabilistic
 
 if agent_type.__name__.lower() == "probabilistic":
     noise_params = [0.0, 0.1, 0.2, 0.3, 0.4]
@@ -325,6 +325,7 @@ def main():
                         np.add(probability_results[iteration][test], agent.belief, out=probability_results[iteration][test])
                         for i in range(arguments.states - 1, 0, -1):
                             if (i, i-1) in agent.preferences:
+                                print((i, i-1))
                                 preference_results[iteration][test][arguments.states - 1 - i] += 1
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
