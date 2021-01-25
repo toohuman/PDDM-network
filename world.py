@@ -10,7 +10,7 @@ from utilities import operators
 from utilities import preferences
 from utilities import results
 
-tests = 50
+tests = 100
 iteration_limit = 10_000
 steady_state_threshold = 100
 trajectory_populations = [10, 50, 100]
@@ -44,10 +44,13 @@ quality_values = []
 comparison_errors = []
 
 # Set the type of agent: qualitative or probabilistic
-# (Pairwise preferences) Agent | Bandwidth | Probabilistic |
-agent_type = Probabilistic
+# (Pairwise preferences) Agent | Bandwidth | Probabilistic | Average
+prob_agent_types = ["probabilistic", "average"]
+agent_type = Average
 
-if agent_type.__name__.lower() == "probabilistic":
+print("Agent type:", agent_type.__name__)
+
+if agent_type.__name__.lower() in prob_agent_types:
     noise_params = [0.0, 0.1, 0.2, 0.3, 0.4]
 
 # Set the initialisation function for agent preferences - option to add additional
@@ -89,7 +92,7 @@ def main_loop(
         if random_instance.random() <= evidence_rate:
 
             # Generate a random piece of evidence, selecting from the set of unknown states.
-            if agent_type.__name__.lower() == "probabilistic":
+            if agent_type.__name__.lower() in prob_agent_types:
                 evidence = agent.random_evidence(
                     states,
                     true_order,
@@ -142,7 +145,7 @@ def main_loop(
             except IndexError:
                 return True
 
-            if agent_type.__name__.lower() == "probabilistic":
+            if agent_type.__name__.lower() in prob_agent_types:
                 new_preference = agent_type.combine(agent1.belief, agent2.belief)
             elif agent_type.__name__.lower() == "bandwidth":
                 new_preference = agent_type.combine(agent1.preferences, agent2.preferences, random_instance, bandwidth_limit)
@@ -216,11 +219,12 @@ def main():
     # For the probabilistic agent:
     # Set the quality values at uniform intervals i/(n+1) for i = 1, ..., n states.
     quality_values[:] = [round(i/(arguments.states + 1), 5) for i in range(arguments.states)]
+    print(quality_values)
 
     bandwidth_limit = None
     if agent_type.__name__.lower() == "bandwidth":
         bandwidth_limit = arguments.states
-        print("bandwidth_limit")
+        print("bandwidth limit:", bandwidth_limit)
 
     comparison_errors[:] = []
     if noise_param is not None:
@@ -256,7 +260,7 @@ def main():
         [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
     ])
 
-    if agent_type.__name__.lower() == "probabilistic":
+    if agent_type.__name__.lower() in prob_agent_types:
         probability_results = np.array([
             [ [ 0.0 for x in range(arguments.states) ] for y in range(tests) ] for z in range(iteration_limit + 1)
         ])
@@ -308,7 +312,7 @@ def main():
             error_results[0][test] += results.error(agent.preferences, true_prefs)
             uncertainty_results[0][test] += results.uncertainty(agent.preferences, true_prefs)
 
-            if agent_type.__name__.lower() == "probabilistic":
+            if agent_type.__name__.lower() in prob_agent_types:
                 np.add(probability_results[0][test], agent.belief, out=probability_results[0][test])
 
         # Main loop of the experiments. Starts at 1 because we have recorded the agents'
@@ -321,20 +325,19 @@ def main():
                 for a, agent in enumerate(network.nodes):
                     error = results.error(agent.preferences, true_prefs)
                     error_results[iteration][test] += error
-                    if agent_type.__name__.lower() == "probabilistic":
+                    if agent_type.__name__.lower() in prob_agent_types:
                         np.add(probability_results[iteration][test], agent.belief, out=probability_results[iteration][test])
                         for i in range(arguments.states - 1, 0, -1):
-                            if (i, i-1) in agent.preferences:
-                                print((i, i-1))
+                            if agent.belief[i] > agent.belief[i - 1]:
                                 preference_results[iteration][test][arguments.states - 1 - i] += 1
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     if iteration == iteration_limit:
                         steady_state_error_results[test][a] = error
-                        if agent_type.__name__.lower() == "probabilistic":
+                        if agent_type.__name__.lower() in prob_agent_types:
                             steady_state_probability_results[test][a] = agent.belief
                             for i in range(arguments.states - 1, 0, -1):
-                                if (i, i-1) in agent.preferences:
+                                if agent.belief[i] > agent.belief[i - 1]:
                                     steady_state_preference_results[test][a][arguments.states - 1 - i] = 1
                         steady_state_uncertainty_results[test][a] = uncertainty
 
@@ -347,15 +350,15 @@ def main():
                     uncertainty = results.uncertainty(agent.preferences, true_prefs)
                     uncertainty_results[iteration][test] += uncertainty
                     steady_state_error_results[test][a] = error
-                    if agent_type.__name__.lower() == "probabilistic":
+                    if agent_type.__name__.lower() in prob_agent_types:
                         steady_state_probability_results[test][a] = agent.belief
                         for i in range(arguments.states - 1, 0, -1):
-                            if (i, i-1) in agent.preferences:
+                            if agent.belief[i] > agent.belief[i - 1]:
                                 steady_state_preference_results[test][a][arguments.states - 1 - i] = 1
                     steady_state_uncertainty_results[test][a] = uncertainty
                 for iter in range(iteration + 1, iteration_limit + 1):
                     error_results[iter][test] = np.copy(error_results[iteration][test])
-                    if agent_type.__name__.lower() == "probabilistic":
+                    if agent_type.__name__.lower() in prob_agent_types:
                         probability_results[iter][test] = np.copy(probability_results[iteration][test])
                     uncertainty_results[iter][test] = np.copy(uncertainty_results[iteration][test])
                 # Simulation has converged, so break main loop.
@@ -374,7 +377,7 @@ def main():
 
     # Post-loop results processing (normalisation).
     error_results /= arguments.agents
-    if agent_type.__name__.lower() == "probabilistic":
+    if agent_type.__name__.lower() in prob_agent_types:
         probability_results /= arguments.agents
         preference_results /= arguments.agents
     uncertainty_results /= arguments.agents
@@ -430,7 +433,7 @@ def main():
         tests
     )
 
-    if agent_type.__name__.lower() == "probabilistic":
+    if agent_type.__name__.lower() in prob_agent_types:
         if arguments.agents in trajectory_populations:
             results.write_to_file(
                 directory,

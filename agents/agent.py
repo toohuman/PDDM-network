@@ -153,7 +153,6 @@ class Agent:
 
 
 class Bandwidth(Agent):
-
     """
     A bandwidth-limited agent that, during pairwise consensus formation, cannot transmit
     the entire length of its preference ordering but instead sends a subset of preferences.
@@ -201,7 +200,6 @@ class Bandwidth(Agent):
 
 
 class Probabilistic(Agent):
-
     """
     A probabilistic agent represents its belief by a probability distribution over the set of states.
     By updating their beliefs according to the updating/fusion rules implemented below, a preference
@@ -307,13 +305,12 @@ class Probabilistic(Agent):
 
         for x, i in enumerate(self.belief):
             for y, j in enumerate(self.belief):
+                if y <= x:
+                    continue
                 if i > j:
                     self.preferences.add((x,y))
                 elif j > i:
                     self.preferences.add((y,x))
-
-        # print(self.belief)
-        # print(sorted(self.preferences, reverse=True))
 
 
     def random_evidence(self, states, true_order, noise_value, quality_values, comparison_errors):
@@ -360,3 +357,30 @@ class Probabilistic(Agent):
         # are erroneously compared
 
         return evidence
+
+
+class Average(Probabilistic):
+    """
+    A probabilistic agent represents its belief by a probability distribution over the set of states.
+    In contrast to the probabilistc agent, an averaging agent simply adopts an averaging fusion operator
+    in order to combine the beliefs of two agents and form a pairwise consensus.
+    """
+
+    @staticmethod
+    def combine(belief1, belief2):
+        """
+        Probabilistic updating using the product operator. This combines two (possibly conflicting)
+        probability distributions into a single probability distribution.
+        """
+
+        # We implement an averaging operator that simply takes the midpoint between the two beliefs
+        # in an element-wise manner.
+        new_belief = [(belief1[i] + belief2[i]) / 2 for i in range(len(belief1))]
+
+        invalid_belief = np.isnan(np.sum(new_belief))
+
+        if not invalid_belief:
+            return new_belief
+        else:
+            # Operator undefined for two inconsistent beliefs.
+            return None
