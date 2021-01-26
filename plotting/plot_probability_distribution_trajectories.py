@@ -6,8 +6,8 @@ import sys
 sys.path.append("../utilities")
 from results import *
 
-PERC_LOWER = 5
-PERC_UPPER = 45
+PERC_LOWER = 10
+PERC_UPPER = 90
 
 states_set = [10]
 agents_set = [100]

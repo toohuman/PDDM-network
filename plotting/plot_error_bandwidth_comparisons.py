@@ -9,8 +9,8 @@ import sys
 sys.path.append("../utilities")
 from results import *
 
-PERC_LOWER = 5  # 10
-PERC_UPPER = 45 # 90
+PERC_LOWER = 10
+PERC_UPPER = 90
 
 states_set = [10]
 agents_set = [100]
@@ -71,12 +71,8 @@ for s, states in enumerate(states_set):
 
                     for i, tests in enumerate(data):
                         sorted_data = sorted(tests)
-                        if bw == "":
-                            lowers[b][i] = sorted_data[PERC_LOWER*2 - 1]
-                            uppers[b][i] = sorted_data[PERC_UPPER*2 - 1]
-                        else:
-                            lowers[b][i] = sorted_data[PERC_LOWER - 1]
-                            uppers[b][i] = sorted_data[PERC_UPPER - 1]
+                        lowers[b][i] = sorted_data[PERC_LOWER - 1]
+                        uppers[b][i] = sorted_data[PERC_UPPER - 1]
                         results[b][i] = np.average(tests)
 
                 if data is None or not whole_agent_set:
