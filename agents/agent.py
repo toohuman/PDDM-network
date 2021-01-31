@@ -229,14 +229,18 @@ class Probabilistic(Agent):
             product_sum
             for i in range(len(belief1))
         ]
+        # print(belief1, belief2, "product = ", product_sum)
+        # print(new_belief)
 
         # Adding a dampening factor to the product rule
         # Jonathan's preferred lambda value: 0.1
         var_lambda = 0.1
         new_belief = [
-            (var_lambda * 0.5) + ((1 - var_lambda) * belief)
+            (var_lambda * 1/len(new_belief)) + ((1 - var_lambda) * belief)
             for belief in new_belief
         ]
+        # print(new_belief)
+        # print()
 
         invalid_belief = np.isnan(np.sum(new_belief))
 
@@ -317,20 +321,6 @@ class Probabilistic(Agent):
         """ Generate a random piece of evidence regardless of current belief. """
 
         evidence = [0.0 for x in range(states)]
-        # shuffled_states = [x for x in range(states)]
-        # self.random_instance.shuffle(shuffled_states)
-        # index_i = shuffled_states.pop()
-        # index_j = shuffled_states.pop()
-
-        # pos_i = true_order.index(index_i)
-        # pos_j = true_order.index(index_j)
-
-        # if pos_i < pos_j:
-        #     best_index = index_i
-        #     worst_index = index_j
-        # else:
-        #     best_index = index_j
-        #     worst_index = index_i
 
         random_state = self.random_instance.choice([x for x in range(states)])
 
@@ -347,11 +337,14 @@ class Probabilistic(Agent):
         # Noise model 1: Normal distribution around q_i
 
         epsilon = self.rng.normal(0, noise_value)
+        random_sample = quality_values[random_state] + epsilon
+        while (random_sample := quality_values[random_state] + epsilon) < 0 or random_sample > 1:
+            epsilon = self.rng.normal(0, noise_value)
 
-        evidence[random_state] = (((states - 1) * max(0, min(quality_values[random_state] + epsilon, 1))) + 1)/states
+        evidence[random_state] = (((states - 1) * (quality_values[random_state] + epsilon)) + 1)/states
         for i, ev in enumerate(evidence):
             if i != random_state:
-                evidence[i] = (max(0, min(1 - quality_values[random_state] - epsilon, 1)))/states
+                evidence[i] = (1 - quality_values[random_state] - epsilon)/states
 
         # Noise model 2: Binary model of learning the wrong quality value if two states
         # are erroneously compared
