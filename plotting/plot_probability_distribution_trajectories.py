@@ -7,7 +7,7 @@ sys.path.append("../utilities")
 from results import *
 
 PERC_LOWER = 10
-PERC_UPPER = 90
+PERC_UPPER = 100
 
 states_set = [10]
 agents_set = [100]
@@ -20,13 +20,15 @@ connectivity_strings = ["{:.2f}".format(x) for x in connectivity_values]
 iterations = [x for x in range(10001)]
 conn = 1.0
 
+agent_type = "probabilistic" # probabilistic | average
+
 closure = False
 if closure is False:
     closure = "_no_cl"
 else:
     closure = ""
 
-result_directory = "../../results/test_results/pddm-network/probabilistic/"
+result_directory = "../../results/test_results/pddm-network/{}/".format(agent_type)
 
 for s, states in enumerate(states_set):
     for n, noise in enumerate(noise_levels):
@@ -143,8 +145,8 @@ for s, states in enumerate(states_set):
                 plt.tight_layout()
                 # Complete graph
                 if conn == 1.0:
-                    plt.savefig("../../results/graphs/pddm-network/probabilistic/distribution_trajectory_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agents, states, er, noise, closure))
+                    plt.savefig("../../results/graphs/pddm-network/{}/distribution_trajectory_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agent_type, agents, states, er, noise, closure))
                 # Evidence-only graph
                 elif conn == 0.0:
-                    plt.savefig("../../results/graphs/pddm-network/probabilistic/distribution_trajectory_ev_only_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agents, states, er, noise, closure))
+                    plt.savefig("../../results/graphs/pddm-network/{}/distribution_trajectory_ev_only_{}_agents_{}_states_{:.2f}_er_{:.2f}_noise{}.pdf".format(agent_type, agents, states, er, noise, closure))
                 plt.clf()

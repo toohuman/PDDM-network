@@ -35,7 +35,7 @@ fusion_rate = None
 evidence_rates = [0.01, 0.05, 0.1, 0.5, 1.0] # [0.01, 0.05, 0.1, 0.5, 1.0]
 evidence_rate = 0.01
 noise_params = [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0] # [0.0, 1.0, 2.5, 5.0, 7.5, 10.0, 100.0]
-noise_param = 0.1
+noise_param = 0.01
 connectivity_values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.5, 1.0]
 connectivity_value = 1.0
 # Store the quality values as we only need to generate them once
@@ -46,7 +46,7 @@ comparison_errors = []
 # Set the type of agent: qualitative or probabilistic
 # (Pairwise preferences) Agent | Bandwidth | Probabilistic | Average
 prob_agent_types = ["probabilistic", "average"]
-agent_type = Average
+agent_type = Probabilistic
 
 print("Agent type:", agent_type.__name__)
 
@@ -218,7 +218,7 @@ def main():
 
     # For the probabilistic agent:
     # Set the quality values at uniform intervals i/(n+1) for i = 1, ..., n states.
-    quality_values[:] = [round(i/(arguments.states + 1), 5) for i in range(arguments.states)]
+    quality_values[:] = [round(i/(arguments.states + 1), 5) for i in range(1, arguments.states + 1)]
     print(quality_values)
 
     bandwidth_limit = None
@@ -260,20 +260,20 @@ def main():
         [ 0.0 for y in range(arguments.agents) ] for z in range(tests)
     ])
 
-    if agent_type.__name__.lower() in prob_agent_types:
-        probability_results = np.array([
-            [ [ 0.0 for x in range(arguments.states) ] for y in range(tests) ] for z in range(iteration_limit + 1)
-        ])
-        steady_state_probability_results = np.array([
-            [ [ 0.0 for x in range(arguments.states) ] for y in range(arguments.agents) ] for z in range(tests)
-        ])
+    # if agent_type.__name__.lower() in prob_agent_types:
+    probability_results = np.array([
+        [ [ 0.0 for x in range(arguments.states) ] for y in range(tests) ] for z in range(iteration_limit + 1)
+    ])
+    steady_state_probability_results = np.array([
+        [ [ 0.0 for x in range(arguments.states) ] for y in range(arguments.agents) ] for z in range(tests)
+    ])
 
-        preference_results = np.array([
-            [ [ 0.0 for x in range(arguments.states - 1) ] for y in range(tests) ] for z in range(iteration_limit + 1)
-        ])
-        steady_state_preference_results = np.array([
-            [ [ 0 for x in range(arguments.states - 1) ] for y in range(arguments.agents) ] for z in range(tests)
-        ])
+    preference_results = np.array([
+        [ [ 0.0 for x in range(arguments.states - 1) ] for y in range(tests) ] for z in range(iteration_limit + 1)
+    ])
+    steady_state_preference_results = np.array([
+        [ [ 0 for x in range(arguments.states - 1) ] for y in range(arguments.agents) ] for z in range(tests)
+    ])
 
     uncertainty_results = np.array([
         [ 0.0 for y in range(tests) ] for z in range(iteration_limit + 1)
