@@ -1,5 +1,6 @@
 import argparse
 import networkx as nx
+from networkx.generators.small import sedgewick_maze_graph
 import numpy as np
 import random
 import sys
@@ -51,7 +52,7 @@ agent_type = Probabilistic
 print("Agent type:", agent_type.__name__)
 
 if agent_type.__name__.lower() in prob_agent_types:
-    noise_params = [0.0, 0.1, 0.2, 0.3, 0.4]
+    noise_params = [0.47, 0.33, 0.21, 0.12, 0.09, 0.07, 0.00]
 
 # Set the initialisation function for agent preferences - option to add additional
 # initialisation functions later.
@@ -401,7 +402,10 @@ def main():
 
     file_name_params.append("{:.2f}er".format(evidence_rate))
     if noise_param is not None:
-        file_name_params.append("{:.1f}nv".format(noise_param))
+        if agent_type.__name__.lower() in prob_agent_types:
+            file_name_params.append("{:.2f}nv".format(noise_param))
+        else:
+            file_name_params.append("{:.1f}nv".format(noise_param))
     if fusion_rate is not None:
         file_name_params.append("{}fr".format(fusion_rate))
     if form_closure is False:
